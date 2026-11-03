@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:habit_tracker/core/theme/app_colors.dart';
+import 'package:habit_me/core/theme/app_colors.dart';
 
 abstract final class AppTheme {
   static ThemeData get dark {

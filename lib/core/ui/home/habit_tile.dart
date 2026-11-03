@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:habit_tracker/core/theme/app_colors.dart';
-import 'package:habit_tracker/data/models/habit.dart';
+import 'package:habit_me/core/theme/app_colors.dart';
+import 'package:habit_me/data/models/habit.dart';
 import 'package:intl/intl.dart';
 
 class HabitTile extends StatelessWidget {
@@ -8,11 +8,13 @@ class HabitTile extends StatelessWidget {
     super.key,
     required this.habit,
     required this.onToggle,
+    required this.onEdit,
     required this.onDelete,
   });
 
   final Habit habit;
   final VoidCallback onToggle;
+  final VoidCallback onEdit;
   final VoidCallback onDelete;
 
   static final _format = DateFormat('d MMM, HH:mm');
@@ -139,6 +141,12 @@ class HabitTile extends StatelessWidget {
                     ),
                   ],
                 ),
+              ),
+              IconButton(
+                tooltip: 'Edit habit',
+                visualDensity: VisualDensity.compact,
+                onPressed: onEdit,
+                icon: const Icon(Icons.edit_outlined, size: 19),
               ),
               Switch(value: done, onChanged: done ? null : (_) => onToggle()),
             ],

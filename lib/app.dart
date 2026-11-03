@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:habit_tracker/core/constants/app_constants.dart';
-import 'package:habit_tracker/core/logic/providers.dart';
-import 'package:habit_tracker/core/theme/app_theme.dart';
-import 'package:habit_tracker/core/ui/home/home_page.dart';
+import 'package:habit_me/core/constants/app_constants.dart';
+import 'package:habit_me/core/logic/providers.dart';
+import 'package:habit_me/core/theme/app_theme.dart';
+import 'package:habit_me/core/ui/home/home_page.dart';
 
 class HabitApp extends ConsumerStatefulWidget {
   const HabitApp({super.key});

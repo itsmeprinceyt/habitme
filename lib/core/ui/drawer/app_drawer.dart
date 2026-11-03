@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:habit_tracker/core/constants/app_constants.dart';
-import 'package:habit_tracker/core/theme/app_colors.dart';
+import 'package:habit_me/core/constants/app_constants.dart';
+import 'package:habit_me/core/theme/app_colors.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key});

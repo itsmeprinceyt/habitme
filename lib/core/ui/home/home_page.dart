@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:habit_tracker/core/constants/app_constants.dart';
-import 'package:habit_tracker/core/logic/providers.dart';
-import 'package:habit_tracker/core/ui/drawer/app_drawer.dart';
-import 'package:habit_tracker/core/ui/home/calendar_view.dart';
-import 'package:habit_tracker/core/ui/home/habit_list_view.dart';
+import 'package:habit_me/core/constants/app_constants.dart';
+import 'package:habit_me/core/logic/providers.dart';
+import 'package:habit_me/core/ui/drawer/app_drawer.dart';
+import 'package:habit_me/core/ui/home/calendar_view.dart';
+import 'package:habit_me/core/ui/home/habit_list_view.dart';
+import 'package:habit_me/core/ui/habit_form/habit_form_sheet.dart';
 
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
@@ -44,11 +45,7 @@ class HomePage extends ConsumerWidget {
             : const HabitListView(key: ValueKey('list')),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Habit form arrives in step 4')),
-          );
-        },
+        onPressed: () => HabitFormSheet.show(context),
         icon: const Icon(Icons.add_rounded),
         label: const Text('New habit'),
       ),

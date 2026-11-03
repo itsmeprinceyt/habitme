@@ -1,9 +1,9 @@
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
-import 'package:habit_tracker/data/models/habit.dart';
-import 'package:habit_tracker/data/repositories/habit_repository.dart';
-import 'package:habit_tracker/data/services/notification_service.dart';
+import 'package:habit_me/data/models/habit.dart';
+import 'package:habit_me/data/repositories/habit_repository.dart';
+import 'package:habit_me/data/services/notification_service.dart';
 
 class HabitScheduler {
   HabitScheduler(this._repo, this._notifications);

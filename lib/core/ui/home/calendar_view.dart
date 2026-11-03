@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
-import 'package:habit_tracker/core/constants/app_constants.dart';
-import 'package:habit_tracker/core/theme/app_colors.dart';
+import 'package:habit_me/core/constants/app_constants.dart';
+import 'package:habit_me/core/theme/app_colors.dart';
 
 class CalendarView extends StatefulWidget {
   const CalendarView({super.key});

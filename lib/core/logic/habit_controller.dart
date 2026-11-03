@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:habit_tracker/core/logic/providers.dart';
-import 'package:habit_tracker/data/models/habit.dart';
-import 'package:habit_tracker/data/repositories/habit_repository.dart';
-import 'package:habit_tracker/core/logic/habit_scheduler.dart';
+import 'package:habit_me/core/logic/providers.dart';
+import 'package:habit_me/data/models/habit.dart';
+import 'package:habit_me/data/repositories/habit_repository.dart';
+import 'package:habit_me/core/logic/habit_scheduler.dart';
 
 class HabitController extends AsyncNotifier<List<Habit>> {
   HabitRepository get _repo => ref.read(habitRepositoryProvider);

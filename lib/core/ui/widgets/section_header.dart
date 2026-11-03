@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:habit_tracker/core/theme/app_colors.dart';
+import 'package:habit_me/core/theme/app_colors.dart';
 
 class SectionHeader extends StatelessWidget {
   const SectionHeader({

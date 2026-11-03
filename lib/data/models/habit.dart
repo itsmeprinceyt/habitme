@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:habit_tracker/data/models/recurrence.dart';
+import 'package:habit_me/data/models/recurrence.dart';
 import 'package:uuid/uuid.dart';
 
 abstract final class HabitColumns {
@@ -47,9 +47,9 @@ class Habit {
       id: const Uuid().v4(),
       name: name.trim(),
       recurrence: recurrence,
-      notify: recurrence != null ? true : notify,
+      notify: notify,
       isDone: false,
-      oneTimeAt: recurrence != null ? null : (notify ? oneTimeAt : null),
+      oneTimeAt: recurrence != null ? null : oneTimeAt,
       anchorAt: anchor,
       nextDueAt: recurrence?.nextAfter(anchor, created),
       completedAt: null,

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:habit_tracker/app.dart';
-import 'package:habit_tracker/data/services/notification_service.dart';
+import 'package:habit_me/app.dart';
+import 'package:habit_me/data/services/notification_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();

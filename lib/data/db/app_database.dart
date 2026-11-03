@@ -1,6 +1,6 @@
-import 'package:habit_tracker/core/constants/app_constants.dart';
-import 'package:habit_tracker/data/models/completion.dart';
-import 'package:habit_tracker/data/models/habit.dart';
+import 'package:habit_me/core/constants/app_constants.dart';
+import 'package:habit_me/data/models/completion.dart';
+import 'package:habit_me/data/models/habit.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
 

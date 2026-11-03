@@ -109,20 +109,18 @@ lib/
 - [x] App startup reconciliation
 - [x] App resume reconciliation
 
-_Note: Implementation completed; runtime testing on physical Android devices is still pending._
-
-## Remaining Work
-
 ### Step 5 – Habit Creation & Editing
 
-- [ ] `lib/core/ui/habit_form/habit_form_sheet.dart`
-- [ ] `lib/core/ui/habit_form/recurrence_picker.dart`
-- [ ] Create habit functionality
-- [ ] Edit habit functionality
-- [ ] One-time habit scheduling
-- [ ] Recurring habit configuration
-- [ ] Notification preference toggle
-- [ ] Form validation
+- [x] Habit form bottom sheet
+- [x] Recurrence picker
+- [x] Create habit functionality
+- [x] Edit existing habits
+- [x] One-time habit scheduling
+- [x] Recurring habit configuration
+- [x] Notification preference toggle
+- [x] Form validation
+- [x] Integration with existing HabitController
+- [x] Notification synchronization after habit changes
 
 ### Step 6 – Date & Countdown Utilities
 
@@ -132,6 +130,8 @@ _Note: Implementation completed; runtime testing on physical Android devices is 
 - [ ] Relative date formatting
 - [ ] Countdown display
 - [ ] Next due date display
+- [ ] Human-readable duration formatting
+- [ ] Handle past and future dates
 
 ### Step 7 – Calendar Integration
 
@@ -140,6 +140,8 @@ _Note: Implementation completed; runtime testing on physical Android devices is 
 - [ ] Navigate between months
 - [ ] Select a date to view habits
 - [ ] Calendar indicators for habit status
+- [ ] Show recurring habit occurrences
+- [ ] Handle calendar date selection
 
 ### Step 8 – Backup & Import/Export
 
@@ -151,6 +153,7 @@ _Note: Implementation completed; runtime testing on physical Android devices is 
 - [ ] SQL database export
 - [ ] SQL database import
 - [ ] Backup validation and error handling
+- [ ] Restore existing backups
 
 ### Step 9 – Testing & Final Polish
 
@@ -160,25 +163,37 @@ _Note: Implementation completed; runtime testing on physical Android devices is 
 - [ ] Test timezone changes
 - [ ] Test app restart and resume
 - [ ] Test notification permissions denied
+- [ ] Test habit creation and editing
+- [ ] Test one-time and recurring habits
 - [ ] Test backup and restore
 - [ ] UI responsiveness and edge cases
+- [ ] Run `flutter analyze`
+- [ ] Resolve remaining warnings and errors
 
 ---
 
 ## Current Progress
 
-| Step | Description                   | Status      |
-| ---- | ----------------------------- | ----------- |
-| 1    | Project Setup & UI Foundation | Complete    |
-| 2    | Data Layer                    | Complete    |
-| 3    | Habit Management & List UI    | Complete    |
-| 4    | Scheduling & Notifications    | Implemented |
-| 5    | Habit Creation & Editing      | Pending     |
-| 6    | Date & Countdown Utilities    | Pending     |
-| 7    | Calendar Integration          | Pending     |
-| 8    | Backup & Import/Export        | Pending     |
-| 9    | Testing & Final Polish        | Pending     |
+| Step | Description                   | Status        |
+| ---- | ----------------------------- | ------------- |
+| 1    | Project Setup & UI Foundation | Complete      |
+| 2    | Data Layer                    | Complete      |
+| 3    | Habit Management & List UI    | Complete      |
+| 4    | Scheduling & Notifications    | Implemented   |
+| 5    | Habit Creation & Editing      | Code provided |
+| 6    | Date & Countdown Utilities    | Pending       |
+| 7    | Calendar Integration          | Pending       |
+| 8    | Backup & Import/Export        | Pending       |
+| 9    | Testing & Final Polish        | Pending       |
 
-**Current milestone:** Habit management foundation and notification scheduling implemented.
+## Current Milestone
 
-**Next milestone:** Habit creation and editing, including recurrence configuration.s
+**Implemented:** Habit management foundation, notification scheduling, and habit creation/editing implementation.
+
+**Next milestone:** Step 6 – Date & Countdown Utilities.
+
+**Next files to create:**
+
+1. `lib/core/utils/date_utils.dart`
+2. `lib/core/utils/duration_format.dart`
+3. `lib/core/ui/widgets/countdown_text.dart`

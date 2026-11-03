@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:habit_tracker/core/constants/app_constants.dart';
-import 'package:habit_tracker/core/logic/providers.dart';
-import 'package:habit_tracker/core/theme/app_colors.dart';
-import 'package:habit_tracker/core/ui/home/habit_tile.dart';
-import 'package:habit_tracker/core/ui/widgets/section_header.dart';
-import 'package:habit_tracker/data/models/habit.dart';
+import 'package:habit_me/core/constants/app_constants.dart';
+import 'package:habit_me/core/logic/providers.dart';
+import 'package:habit_me/core/theme/app_colors.dart';
+import 'package:habit_me/core/ui/home/habit_tile.dart';
+import 'package:habit_me/core/ui/habit_form/habit_form_sheet.dart';
+import 'package:habit_me/core/ui/widgets/section_header.dart';
+import 'package:habit_me/data/models/habit.dart';
 
 class HabitListView extends ConsumerWidget {
   const HabitListView({super.key});
@@ -18,6 +19,7 @@ class HabitListView extends ConsumerWidget {
         key: ValueKey(habit.id),
         habit: habit,
         onToggle: () => controller.toggle(habit.id),
+        onEdit: () => HabitFormSheet.show(context, habit: habit),
         onDelete: () {
           final messenger = ScaffoldMessenger.of(context);
           controller.delete(habit.id);

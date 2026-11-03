@@ -1,7 +1,7 @@
-import 'package:habit_tracker/core/constants/app_constants.dart';
-import 'package:habit_tracker/data/db/app_database.dart';
-import 'package:habit_tracker/data/models/completion.dart';
-import 'package:habit_tracker/data/models/habit.dart';
+import 'package:habit_me/core/constants/app_constants.dart';
+import 'package:habit_me/data/db/app_database.dart';
+import 'package:habit_me/data/models/completion.dart';
+import 'package:habit_me/data/models/habit.dart';
 
 class HabitRepository {
   HabitRepository(this._database);
