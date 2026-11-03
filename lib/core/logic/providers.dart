@@ -3,6 +3,8 @@ import 'package:habit_tracker/core/logic/habit_controller.dart';
 import 'package:habit_tracker/data/db/app_database.dart';
 import 'package:habit_tracker/data/models/habit.dart';
 import 'package:habit_tracker/data/repositories/habit_repository.dart';
+import 'package:habit_tracker/core/logic/habit_scheduler.dart';
+import 'package:habit_tracker/data/services/notification_service.dart';
 
 enum HomeViewMode { list, calendar }
 
@@ -42,4 +44,15 @@ final completedHabitsProvider = Provider<List<Habit>>((ref) {
         (b.completedAt ?? b.updatedAt).compareTo(a.completedAt ?? a.updatedAt),
   );
   return done;
+});
+
+final habitSchedulerProvider = Provider<HabitScheduler>((ref) {
+  return HabitScheduler(
+    ref.read(habitRepositoryProvider),
+    ref.read(notificationServiceProvider),
+  );
+});
+
+final notificationServiceProvider = Provider<NotificationService>((ref) {
+  return NotificationService.instance;
 });
