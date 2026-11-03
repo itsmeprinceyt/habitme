@@ -65,10 +65,12 @@ class Recurrence {
   }
 
   int _nextIndex(DateTime anchor, DateTime now) {
-    var index = max(1, _estimate(anchor, now) - 1);
+    var index = max(0, _estimate(anchor, now) - 1);
+
     while (!occurrence(anchor, index).isAfter(now)) {
       index++;
     }
+
     return index;
   }
 

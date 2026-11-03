@@ -35,6 +35,7 @@ class _HabitFormSheetState extends ConsumerState<HabitFormSheet> {
   late bool _isRecurring;
   late bool _notify;
   late DateTime _oneTimeAt;
+  late DateTime _recurringAt;
   Recurrence? _recurrence;
   bool _saving = false;
 
@@ -52,6 +53,8 @@ class _HabitFormSheetState extends ConsumerState<HabitFormSheet> {
         const Recurrence(unit: RecurUnit.days, interval: 1);
     _oneTimeAt =
         habit?.oneTimeAt ?? DateTime.now().add(const Duration(hours: 1));
+
+    _recurringAt = habit?.anchorAt ?? DateTime.now();
   }
 
   @override
@@ -95,6 +98,36 @@ class _HabitFormSheetState extends ConsumerState<HabitFormSheet> {
     }
   }
 
+  Future<void> _pickRecurringDateTime() async {
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: _recurringAt,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+      builder: _pickerTheme,
+    );
+
+    if (pickedDate == null || !mounted) return;
+
+    final pickedTime = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(_recurringAt),
+      builder: _pickerTheme,
+    );
+
+    if (pickedTime == null || !mounted) return;
+
+    setState(() {
+      _recurringAt = DateTime(
+        pickedDate.year,
+        pickedDate.month,
+        pickedDate.day,
+        pickedTime.hour,
+        pickedTime.minute,
+      );
+    });
+  }
+
   Widget _pickerTheme(BuildContext context, Widget? child) {
     return Theme(
       data: Theme.of(context).copyWith(
@@ -130,7 +163,7 @@ class _HabitFormSheetState extends ConsumerState<HabitFormSheet> {
           recurrence: recurrence,
           notify: _notify,
           oneTimeAt: _isRecurring ? null : _oneTimeAt,
-          anchorAt: now,
+          anchorAt: _isRecurring ? _recurringAt : now,
           now: now,
         );
         await ref.read(habitControllerProvider.notifier).add(habit);
@@ -138,11 +171,15 @@ class _HabitFormSheetState extends ConsumerState<HabitFormSheet> {
         final recurrenceChanged =
             existing.recurrence?.unit != recurrence?.unit ||
             existing.recurrence?.interval != recurrence?.interval;
+
         final typeChanged = existing.isRecurring != _isRecurring;
-        final resetSchedule = typeChanged || recurrenceChanged;
-        final anchor = _isRecurring
-            ? (resetSchedule ? now : existing.anchorAt)
-            : existing.anchorAt;
+
+        final anchorChanged =
+            _isRecurring && !existing.anchorAt.isAtSameMomentAs(_recurringAt);
+
+        final resetSchedule = typeChanged || recurrenceChanged || anchorChanged;
+
+        final anchor = _isRecurring ? _recurringAt : existing.anchorAt;
         final nextDue = recurrence == null
             ? null
             : (resetSchedule || existing.nextDueAt == null
@@ -263,6 +300,47 @@ class _HabitFormSheetState extends ConsumerState<HabitFormSheet> {
               ),
               const SizedBox(height: 20),
               if (_isRecurring) ...[
+                Text(
+                  'START DATE & TIME',
+                  style: Theme.of(context).textTheme.labelMedium,
+                ),
+                const SizedBox(height: 8),
+
+                InkWell(
+                  onTap: _pickRecurringDateTime,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppColors.card,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.calendar_month_outlined,
+                          color: AppColors.green,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            DateFormat('EEE, d MMM yyyy · hh:mm a')
+                                .format(_recurringAt),
+                          ),
+                        ),
+                        const Icon(
+                          Icons.chevron_right_rounded,
+                          color: AppColors.muted,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
                 Text(
                   'REPEAT EVERY',
                   style: Theme.of(context).textTheme.labelMedium,
