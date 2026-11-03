@@ -1,4 +1,4 @@
-package com.itsmeprince.habit_tracker
+package com.itsmeprince.habitme
 
 import io.flutter.embedding.android.FlutterActivity
 
