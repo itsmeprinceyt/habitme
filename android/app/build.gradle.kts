@@ -28,6 +28,8 @@ android {
         // flag during build.
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        multiDexEnabled = true
     }
 
     buildTypes {
