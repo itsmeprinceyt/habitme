@@ -1,6 +1,6 @@
 # HabitMe – Project File Map
 
-**Package name:** `habit_tracker`
+**Package name:** `habit_me`
 
 ## Project Structure
 
@@ -121,6 +121,7 @@ lib/
 - [x] Form validation
 - [x] Integration with existing HabitController
 - [x] Notification synchronization after habit changes
+- [x] Delete button in edit mode (with confirmation dialog)
 
 ### Step 6 – Date & Countdown Utilities
 
@@ -145,15 +146,26 @@ lib/
 
 ### Step 8 – Backup & Import/Export
 
-- [ ] `lib/data/services/backup_service.dart`
+- [x] `lib/data/services/backup_service.dart`
+- [x] `lib/data/services/sql_codec.dart`
 - [ ] `lib/data/services/csv_codec.dart`
-- [ ] `lib/data/services/sql_codec.dart`
 - [ ] CSV export
 - [ ] CSV import
-- [ ] SQL database export
-- [ ] SQL database import
-- [ ] Backup validation and error handling
-- [ ] Restore existing backups
+- [x] SQL database export (share sheet, `habitme_backup_<timestamp>.sql`)
+- [x] SQL database import (file picker, merge by habit id)
+- [x] Backup validation and error handling (marker check, column whitelist, no raw SQL execution)
+- [x] Restore existing backups (habits + completions, list refresh, notifications rescheduled)
+- [x] `backupServiceProvider` in `providers.dart`
+- [x] `url_launcher` dependency and Android `<queries>` entry for https
+
+### Step 8b – UI Polish (done alongside)
+
+- [x] Drawer redesign: rounded logo (`assets/habitme_logo_rounded.png`), tagline
+- [x] "Made by ItsMe Prince" card opening https://www.itsmeprince.com
+- [x] Drawer Import / Export wired to SQL backup
+- [x] Safe-area handling on home body (`SafeArea(top: false)`)
+- [x] Floating action button restyled (card background, green foreground, border)
+- [x] Drawer background configurable via `drawerTheme` in `app_theme.dart`
 
 ### Step 9 – Testing & Final Polish
 
@@ -174,21 +186,21 @@ lib/
 
 ## Current Progress
 
-| Step | Description                   | Status        |
-| ---- | ----------------------------- | ------------- |
-| 1    | Project Setup & UI Foundation | Complete      |
-| 2    | Data Layer                    | Complete      |
-| 3    | Habit Management & List UI    | Complete      |
-| 4    | Scheduling & Notifications    | Implemented   |
-| 5    | Habit Creation & Editing      | Code provided |
-| 6    | Date & Countdown Utilities    | Pending       |
-| 7    | Calendar Integration          | Pending       |
-| 8    | Backup & Import/Export        | Pending       |
-| 9    | Testing & Final Polish        | Pending       |
+| Step | Description                   | Status                  |
+| ---- | ----------------------------- | ----------------------- |
+| 1    | Project Setup & UI Foundation | Complete                |
+| 2    | Data Layer                    | Complete                |
+| 3    | Habit Management & List UI    | Complete                |
+| 4    | Scheduling & Notifications    | Implemented             |
+| 5    | Habit Creation & Editing      | Complete (delete added) |
+| 6    | Date & Countdown Utilities    | Pending                 |
+| 7    | Calendar Integration          | Pending                 |
+| 8    | Backup & Import/Export        | SQL done, CSV pending   |
+| 9    | Testing & Final Polish        | Pending                 |
 
 ## Current Milestone
 
-**Implemented:** Habit management foundation, notification scheduling, and habit creation/editing implementation.
+**Implemented:** Habit management, notification scheduling, habit creation/editing/deleting, SQL backup export/import, redesigned drawer, and safe-area/FAB polish.
 
 **Next milestone:** Step 6 – Date & Countdown Utilities.
 
@@ -197,3 +209,14 @@ lib/
 1. `lib/core/utils/date_utils.dart`
 2. `lib/core/utils/duration_format.dart`
 3. `lib/core/ui/widgets/countdown_text.dart`
+
+**Optional later:** `lib/data/services/csv_codec.dart` for CSV export/import.
+
+## Decisions Log
+
+- sqflite chosen over drift so SQL dump export stays simple.
+- Riverpod chosen for state.
+- SQL import never executes file contents; it parses only the exporter's INSERT format with whitelisted columns.
+- Import merges by habit id using update-then-insert, because `INSERT OR REPLACE` would cascade-delete completions through the foreign key.
+- Completions are deduplicated on (habit_id, completed_at) during import.
+- file_picker 13: `FilePicker.pickFiles(...)` returns a nullable `List<PlatformFile>`; read the file via its path.

@@ -38,11 +38,14 @@ class HomePage extends ConsumerWidget {
         ],
       ),
       drawer: const AppDrawer(),
-      body: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 220),
-        child: isCalendar
-            ? const CalendarView(key: ValueKey('calendar'))
-            : const HabitListView(key: ValueKey('list')),
+      body: SafeArea(
+        top: false,
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 220),
+          child: isCalendar
+              ? const CalendarView(key: ValueKey('calendar'))
+              : const HabitListView(key: ValueKey('list')),
+        ),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => HabitFormSheet.show(context),
