@@ -4,6 +4,7 @@ import 'package:habit_me/data/db/app_database.dart';
 import 'package:habit_me/data/models/habit.dart';
 import 'package:habit_me/data/repositories/habit_repository.dart';
 import 'package:habit_me/core/logic/habit_scheduler.dart';
+import 'package:habit_me/data/services/backup_service.dart';
 import 'package:habit_me/data/services/notification_service.dart';
 
 enum HomeViewMode { list, calendar }
@@ -56,3 +57,7 @@ final habitSchedulerProvider = Provider<HabitScheduler>((ref) {
 final notificationServiceProvider = Provider<NotificationService>((ref) {
   return NotificationService.instance;
 });
+
+final backupServiceProvider = Provider<BackupService>(
+  (ref) => BackupService(AppDatabase.instance),
+);

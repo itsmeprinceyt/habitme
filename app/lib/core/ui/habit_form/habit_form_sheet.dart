@@ -215,6 +215,47 @@ class _HabitFormSheetState extends ConsumerState<HabitFormSheet> {
     }
   }
 
+  Future<void> _delete() async {
+    final existing = widget.habit;
+    if (existing == null) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete habit?'),
+        content: Text('"${existing.name}" will be permanently deleted.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.orange),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+
+    setState(() => _saving = true);
+    try {
+      await ref.read(habitControllerProvider.notifier).delete(existing.id);
+      navigator.pop();
+      messenger.showSnackBar(const SnackBar(content: Text('Habit deleted')));
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      messenger.showSnackBar(
+        SnackBar(content: Text('Could not delete habit: $error')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
@@ -430,6 +471,21 @@ class _HabitFormSheetState extends ConsumerState<HabitFormSheet> {
                   ),
                 ),
               ),
+              if (_isEditing) ...[
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: _saving ? null : _delete,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.orange,
+                      side: const BorderSide(color: AppColors.orange),
+                    ),
+                    icon: const Icon(Icons.delete_outline_rounded),
+                    label: const Text('Delete habit'),
+                  ),
+                ),
+              ],
             ],
           ),
         ),

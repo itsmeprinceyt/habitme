@@ -36,7 +36,7 @@ abstract final class AppTheme {
         ),
       ),
       drawerTheme: const DrawerThemeData(
-        backgroundColor: AppColors.black,
+        backgroundColor: AppColors.surfaceLight,
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(),
       ),
@@ -60,8 +60,8 @@ abstract final class AppTheme {
         textColor: AppColors.white,
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
-        backgroundColor: AppColors.green,
-        foregroundColor: AppColors.black,
+        backgroundColor: AppColors.card,
+        foregroundColor: AppColors.green,
         elevation: 0,
         extendedTextStyle: const TextStyle(
           fontWeight: FontWeight.w700,
