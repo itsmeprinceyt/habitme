@@ -8,8 +8,16 @@ import 'package:habit_me/core/ui/habit_form/habit_form_sheet.dart';
 import 'package:habit_me/core/ui/widgets/section_header.dart';
 import 'package:habit_me/data/models/habit.dart';
 
-class HabitListView extends ConsumerWidget {
+class HabitListView extends ConsumerStatefulWidget {
   const HabitListView({super.key});
+
+  @override
+  ConsumerState<HabitListView> createState() => _HabitListViewState();
+}
+
+class _HabitListViewState extends ConsumerState<HabitListView> {
+  bool _isActiveExpanded = true;
+  bool _isCompletedExpanded = true;
 
   Widget _tile(BuildContext context, WidgetRef ref, Habit habit) {
     final controller = ref.read(habitControllerProvider.notifier);
@@ -32,7 +40,7 @@ class HabitListView extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final async = ref.watch(habitControllerProvider);
     final active = ref.watch(activeHabitsProvider);
     final completed = ref.watch(completedHabitsProvider);
@@ -57,25 +65,64 @@ class HabitListView extends ConsumerWidget {
             AppConstants.fabClearance,
           ),
           children: [
+            // Active Section
             SectionHeader(
               title: 'Active',
               count: active.length,
               accent: AppColors.green,
+              isExpanded: _isActiveExpanded,
+              onToggleExpand: () {
+                setState(() {
+                  _isActiveExpanded = !_isActiveExpanded;
+                });
+              },
             ),
-            if (active.isEmpty)
-              const _EmptyHint(text: 'All caught up. Nothing active right now.')
-            else
-              for (final habit in active) _tile(context, ref, habit),
+            AnimatedCrossFade(
+              firstChild: active.isEmpty
+                  ? const _EmptyHint(
+                      text: 'All caught up. Nothing active right now.',
+                    )
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        for (final habit in active) _tile(context, ref, habit),
+                      ],
+                    ),
+              secondChild: const SizedBox(width: double.infinity),
+              crossFadeState: _isActiveExpanded
+                  ? CrossFadeState.showFirst
+                  : CrossFadeState.showSecond,
+              duration: const Duration(milliseconds: 240),
+            ),
             const SizedBox(height: 14),
+
+            // Completed Section
             SectionHeader(
               title: 'Completed',
               count: completed.length,
               accent: AppColors.orange,
+              isExpanded: _isCompletedExpanded,
+              onToggleExpand: () {
+                setState(() {
+                  _isCompletedExpanded = !_isCompletedExpanded;
+                });
+              },
             ),
-            if (completed.isEmpty)
-              const _EmptyHint(text: 'Finished habits show up here.')
-            else
-              for (final habit in completed) _tile(context, ref, habit),
+            AnimatedCrossFade(
+              firstChild: completed.isEmpty
+                  ? const _EmptyHint(text: 'Finished habits show up here.')
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        for (final habit in completed) _tile(context, ref, habit),
+                      ],
+                    ),
+              secondChild: const SizedBox(width: double.infinity),
+              crossFadeState: _isCompletedExpanded
+                  ? CrossFadeState.showFirst
+                  : CrossFadeState.showSecond,
+              duration: const Duration(milliseconds: 240),
+            ),
           ],
         );
       },

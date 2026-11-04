@@ -59,7 +59,6 @@ lib/
     └── services/
         ├── notification_service.dart
         ├── backup_service.dart
-        ├── csv_codec.dart
         └── sql_codec.dart
 ```
 
@@ -89,7 +88,7 @@ lib/
 - [x] Active habits section
 - [x] Completed habits section
 - [x] Habit tile
-- [x] Mark habit as completed
+- [x] Mark habit as completed and untoggle back to active
 - [x] Swipe to delete with confirmation
 - [x] Empty states
 - [x] Derived providers for active and completed habits
@@ -111,8 +110,9 @@ lib/
 
 ### Step 5 – Habit Creation & Editing
 
-- [x] Habit form bottom sheet
-- [x] Recurrence picker
+- [x] Modern center popup modal dialog for Habit Creation & Editing
+- [x] User-friendly wording ('Frequency', 'Repeat every...', 'Daily', 'Weekly', 'Monthly' quick presets)
+- [x] Recurrence picker with conversational phrasing and natural chip presets
 - [x] Create habit functionality
 - [x] Edit existing habits
 - [x] One-time habit scheduling
@@ -125,32 +125,31 @@ lib/
 
 ### Step 6 – Date & Countdown Utilities
 
-- [ ] `lib/core/utils/date_utils.dart`
-- [ ] `lib/core/utils/duration_format.dart`
-- [ ] `lib/core/ui/widgets/countdown_text.dart`
-- [ ] Relative date formatting
-- [ ] Countdown display
-- [ ] Next due date display
-- [ ] Human-readable duration formatting
-- [ ] Handle past and future dates
+- [x] `lib/core/utils/date_utils.dart`
+- [x] `lib/core/utils/duration_format.dart`
+- [x] `lib/core/ui/widgets/countdown_text.dart`
+- [x] Relative date formatting (Today, Tomorrow, Yesterday, date + time)
+- [x] Live ticking countdown display with tabular figures
+- [x] Next due date / completion date display
+- [x] Human-readable duration formatting & overdue handling
+- [x] Section expandable/collapsible toggle with smooth rotation animation
+- [x] Habit tile full text display without text truncation or ellipsis
+- [x] Responsive layout with slick border glow and styling
 
 ### Step 7 – Calendar Integration
 
-- [ ] Display habits on calendar
-- [ ] Show scheduled and completed dates
-- [ ] Navigate between months
-- [ ] Select a date to view habits
-- [ ] Calendar indicators for habit status
-- [ ] Show recurring habit occurrences
-- [ ] Handle calendar date selection
+- [x] Display habits on calendar with dynamic event loading
+- [x] Filter chips toggle for One-Time and Recurring habits (both can be toggled independently)
+- [x] Creative markers: Green dot for One-Time, Orange dot for Recurring, and a dual-colored gradient pill when both exist on the same day
+- [x] Weekend colors fixed to match theme (muted clean look instead of forced orange)
+- [x] Navigate between months and select dates
+- [x] Interactive selected day breakdown showing recurring & one-time habits with direct completion toggle and edit sheet tap
+- [x] Full text visibility without ellipsis truncation
 
 ### Step 8 – Backup & Import/Export
 
 - [x] `lib/data/services/backup_service.dart`
 - [x] `lib/data/services/sql_codec.dart`
-- [ ] `lib/data/services/csv_codec.dart`
-- [ ] CSV export
-- [ ] CSV import
 - [x] SQL database export (share sheet, `habitme_backup_<timestamp>.sql`)
 - [x] SQL database import (file picker, merge by habit id)
 - [x] Backup validation and error handling (marker check, column whitelist, no raw SQL execution)
@@ -169,6 +168,7 @@ lib/
 
 ### Step 9 – Testing & Final Polish
 
+- [x] Zero-truncation responsiveness testing across compact & tablet viewports
 - [ ] Test notification scheduling on Android
 - [ ] Test exact and inexact alarms
 - [ ] Test recurring habit reset
@@ -178,7 +178,6 @@ lib/
 - [ ] Test habit creation and editing
 - [ ] Test one-time and recurring habits
 - [ ] Test backup and restore
-- [ ] UI responsiveness and edge cases
 - [ ] Run `flutter analyze`
 - [ ] Resolve remaining warnings and errors
 
@@ -192,31 +191,14 @@ lib/
 | 2    | Data Layer                    | Complete                |
 | 3    | Habit Management & List UI    | Complete                |
 | 4    | Scheduling & Notifications    | Implemented             |
-| 5    | Habit Creation & Editing      | Complete (delete added) |
-| 6    | Date & Countdown Utilities    | Pending                 |
-| 7    | Calendar Integration          | Pending                 |
-| 8    | Backup & Import/Export        | SQL done, CSV pending   |
-| 9    | Testing & Final Polish        | Pending                 |
+| 5    | Habit Creation & Editing      | Complete (Popup Redone) |
+| 6    | Date & Countdown Utilities    | Complete                |
+| 7    | Calendar Integration          | Complete                |
+| 8    | Backup & Import/Export        | Complete                |
+| 9    | Testing & Final Polish        | In Progress             |
 
 ## Current Milestone
 
-**Implemented:** Habit management, notification scheduling, habit creation/editing/deleting, SQL backup export/import, redesigned drawer, and safe-area/FAB polish.
+**Implemented:** Center popup habit dialog with natural wording & quick presets, responsive zero-truncation layout, calendar filtering with gradient badges, expandable habit tiles with live ticking countdowns, and SQL backup import/export.
 
-**Next milestone:** Step 6 – Date & Countdown Utilities.
-
-**Next files to create:**
-
-1. `lib/core/utils/date_utils.dart`
-2. `lib/core/utils/duration_format.dart`
-3. `lib/core/ui/widgets/countdown_text.dart`
-
-**Optional later:** `lib/data/services/csv_codec.dart` for CSV export/import.
-
-## Decisions Log
-
-- sqflite chosen over drift so SQL dump export stays simple.
-- Riverpod chosen for state.
-- SQL import never executes file contents; it parses only the exporter's INSERT format with whitelisted columns.
-- Import merges by habit id using update-then-insert, because `INSERT OR REPLACE` would cascade-delete completions through the foreign key.
-- Completions are deduplicated on (habit_id, completed_at) during import.
-- file_picker 13: `FilePicker.pickFiles(...)` returns a nullable `List<PlatformFile>`; read the file via its path.
+**Next milestone:** Step 9 – Testing & Final Polish.

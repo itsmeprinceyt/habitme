@@ -75,7 +75,7 @@ abstract final class AppTheme {
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith(
           (states) => states.contains(WidgetState.selected)
-              ? AppColors.black
+              ? AppColors.white
               : AppColors.muted,
         ),
         trackColor: WidgetStateProperty.resolveWith(
@@ -83,7 +83,11 @@ abstract final class AppTheme {
               ? AppColors.green
               : AppColors.border,
         ),
-        trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
+        trackOutlineColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? AppColors.green
+              : AppColors.border,
+        ),
       ),
       snackBarTheme: SnackBarThemeData(
         backgroundColor: AppColors.card,

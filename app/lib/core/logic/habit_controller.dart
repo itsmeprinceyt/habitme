@@ -23,9 +23,10 @@ class HabitController extends AsyncNotifier<List<Habit>> {
 
   Future<void> toggle(String id) async {
     final habit = _find(id);
-    if (habit == null || habit.isDone) return;
+    if (habit == null) return;
 
-    final updated = await _repo.toggleDone(habit, true);
+    final targetDoneState = !habit.isDone;
+    final updated = await _repo.toggleDone(habit, targetDoneState);
     _replace(updated);
 
     await _syncNotifications();

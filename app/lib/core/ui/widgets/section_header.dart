@@ -7,16 +7,22 @@ class SectionHeader extends StatelessWidget {
     required this.title,
     required this.count,
     required this.accent,
+    this.isExpanded,
+    this.onToggleExpand,
   });
 
   final String title;
   final int count;
   final Color accent;
+  final bool? isExpanded;
+  final VoidCallback? onToggleExpand;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 8, bottom: 12),
+    final hasToggle = onToggleExpand != null && isExpanded != null;
+
+    final content = Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
           Container(
@@ -53,8 +59,38 @@ class SectionHeader extends StatelessWidget {
               ),
             ),
           ),
+          const Spacer(),
+          if (hasToggle)
+            AnimatedRotation(
+              turns: isExpanded! ? 0.5 : 0.0,
+              duration: const Duration(milliseconds: 240),
+              curve: Curves.easeInOutCubic,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceLight,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: const Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  size: 18,
+                  color: AppColors.muted,
+                ),
+              ),
+            ),
         ],
       ),
     );
+
+    if (hasToggle) {
+      return InkWell(
+        onTap: onToggleExpand,
+        borderRadius: BorderRadius.circular(10),
+        child: content,
+      );
+    }
+
+    return content;
   }
 }

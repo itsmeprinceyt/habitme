@@ -12,15 +12,11 @@ class HabitFormSheet extends ConsumerStatefulWidget {
 
   final Habit? habit;
 
+  /// Shows the habit creation / editing modal as a responsive center popup dialog.
   static Future<void> show(BuildContext context, {Habit? habit}) {
-    return showModalBottomSheet<void>(
+    return showDialog<void>(
       context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
+      barrierDismissible: true,
       builder: (_) => HabitFormSheet(habit: habit),
     );
   }
@@ -53,7 +49,6 @@ class _HabitFormSheetState extends ConsumerState<HabitFormSheet> {
         const Recurrence(unit: RecurUnit.days, interval: 1);
     _oneTimeAt =
         habit?.oneTimeAt ?? DateTime.now().add(const Duration(hours: 1));
-
     _recurringAt = habit?.anchorAt ?? DateTime.now();
   }
 
@@ -93,7 +88,7 @@ class _HabitFormSheetState extends ConsumerState<HabitFormSheet> {
 
     if (_oneTimeAt.isBefore(now)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('This reminder time is in the past.')),
+        const SnackBar(content: Text('Note: This target time is set in the past.')),
       );
     }
   }
@@ -131,8 +126,10 @@ class _HabitFormSheetState extends ConsumerState<HabitFormSheet> {
   Widget _pickerTheme(BuildContext context, Widget? child) {
     return Theme(
       data: Theme.of(context).copyWith(
-        colorScheme: Theme.of(context).colorScheme
-            .copyWith(primary: AppColors.green, surface: AppColors.card),
+        colorScheme: Theme.of(context).colorScheme.copyWith(
+              primary: AppColors.green,
+              surface: AppColors.card,
+            ),
       ),
       child: child!,
     );
@@ -148,7 +145,7 @@ class _HabitFormSheetState extends ConsumerState<HabitFormSheet> {
     if (_isRecurring && recurrence == null) return;
     if (!_isRecurring && _notify && !_oneTimeAt.isAfter(now)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Choose a reminder time in the future.')),
+        const SnackBar(content: Text('Please choose a reminder time in the future.')),
       );
       return;
     }
@@ -173,7 +170,6 @@ class _HabitFormSheetState extends ConsumerState<HabitFormSheet> {
             existing.recurrence?.interval != recurrence?.interval;
 
         final typeChanged = existing.isRecurring != _isRecurring;
-
         final anchorChanged =
             _isRecurring && !existing.anchorAt.isAtSameMomentAs(_recurringAt);
 
@@ -183,8 +179,8 @@ class _HabitFormSheetState extends ConsumerState<HabitFormSheet> {
         final nextDue = recurrence == null
             ? null
             : (resetSchedule || existing.nextDueAt == null
-                  ? recurrence.nextAfter(anchor, now)
-                  : existing.nextDueAt);
+                ? recurrence.nextAfter(anchor, now)
+                : existing.nextDueAt);
 
         final updated = existing.copyWith(
           name: name,
@@ -207,9 +203,9 @@ class _HabitFormSheetState extends ConsumerState<HabitFormSheet> {
       );
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Could not save habit: $error')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not save habit: $error')),
+      );
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -222,12 +218,20 @@ class _HabitFormSheetState extends ConsumerState<HabitFormSheet> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
+        backgroundColor: AppColors.card,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: AppColors.border),
+        ),
         title: const Text('Delete habit?'),
-        content: Text('"${existing.name}" will be permanently deleted.'),
+        content: Text(
+          '"${existing.name}" will be permanently removed.',
+          style: const TextStyle(color: AppColors.muted),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Cancel'),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.white)),
           ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
@@ -258,236 +262,426 @@ class _HabitFormSheetState extends ConsumerState<HabitFormSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+    final mediaQuery = MediaQuery.of(context);
+    final isCompact = mediaQuery.size.width < 420;
 
-    return Padding(
-      padding: EdgeInsets.only(bottom: bottomInset),
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-        child: Form(
-          key: _formKey,
+    return Dialog(
+      backgroundColor: AppColors.surface,
+      insetPadding: EdgeInsets.symmetric(
+        horizontal: isCompact ? 16 : 24,
+        vertical: 24,
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: const BorderSide(color: AppColors.border, width: 1.2),
+      ),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 480, maxHeight: 680),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Center(
-                child: Container(
-                  width: 38,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppColors.border,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
+              // Header
+              Container(
+                padding: const EdgeInsets.fromLTRB(20, 16, 12, 16),
+                decoration: const BoxDecoration(
+                  color: AppColors.card,
+                  border: Border(bottom: BorderSide(color: AppColors.border)),
                 ),
-              ),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      _isEditing ? 'Edit habit' : 'New habit',
-                      style: Theme.of(context).textTheme.titleLarge
-                          ?.copyWith(fontWeight: FontWeight.w700),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: AppColors.green.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(
+                        _isEditing ? Icons.edit_note_rounded : Icons.add_task_rounded,
+                        color: AppColors.green,
+                        size: 20,
+                      ),
                     ),
-                  ),
-                  IconButton(
-                    tooltip: 'Close',
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close_rounded),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _nameController,
-                autofocus: !_isEditing,
-                maxLength: 60,
-                textCapitalization: TextCapitalization.sentences,
-                decoration: const InputDecoration(
-                  labelText: 'Habit name',
-                  hintText: 'e.g. Read 10 pages',
-                  prefixIcon: Icon(Icons.edit_outlined),
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Please enter a habit name';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'HABIT TYPE',
-                style: Theme.of(context).textTheme.labelMedium,
-              ),
-              const SizedBox(height: 8),
-              SegmentedButton<bool>(
-                segments: const [
-                  ButtonSegment(
-                    value: true,
-                    label: Text('Recurring'),
-                    icon: Icon(Icons.repeat_rounded),
-                  ),
-                  ButtonSegment(
-                    value: false,
-                    label: Text('One-time'),
-                    icon: Icon(Icons.flag_outlined),
-                  ),
-                ],
-                selected: {_isRecurring},
-                onSelectionChanged: (selection) {
-                  setState(() => _isRecurring = selection.first);
-                },
-              ),
-              const SizedBox(height: 20),
-              if (_isRecurring) ...[
-                Text(
-                  'START DATE & TIME',
-                  style: Theme.of(context).textTheme.labelMedium,
-                ),
-                const SizedBox(height: 8),
-
-                InkWell(
-                  onTap: _pickRecurringDateTime,
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: AppColors.card,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.border),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.calendar_month_outlined,
-                          color: AppColors.green,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        _isEditing ? 'Edit Habit' : 'Create New Habit',
+                        style: const TextStyle(
+                          color: AppColors.white,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            DateFormat('EEE, d MMM yyyy · hh:mm a')
-                                .format(_recurringAt),
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Close',
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.close_rounded, color: AppColors.muted),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Scrollable Form Body
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Habit Name
+                        const Text(
+                          'HABIT TITLE',
+                          style: TextStyle(
+                            color: AppColors.muted,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 1.1,
                           ),
                         ),
-                        const Icon(
-                          Icons.chevron_right_rounded,
-                          color: AppColors.muted,
+                        const SizedBox(height: 8),
+                        TextFormField(
+                          controller: _nameController,
+                          autofocus: !_isEditing,
+                          maxLength: 100,
+                          textCapitalization: TextCapitalization.sentences,
+                          style: const TextStyle(color: AppColors.white, fontSize: 15),
+                          decoration: InputDecoration(
+                            hintText: 'e.g. Drink 2L water, Morning run, Read book',
+                            hintStyle: const TextStyle(color: AppColors.muted, fontSize: 13.5),
+                            filled: true,
+                            fillColor: AppColors.card,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: AppColors.border),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: AppColors.green, width: 1.5),
+                            ),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return 'Please name your habit';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 14),
+
+                        // How often does this happen? (Habit Type)
+                        const Text(
+                          'FREQUENCY',
+                          style: TextStyle(
+                            color: AppColors.muted,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 1.1,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _TypeSelectionCard(
+                                title: 'Recurring',
+                                subtitle: 'Repeats periodically',
+                                icon: Icons.repeat_rounded,
+                                accentColor: AppColors.orange,
+                                isSelected: _isRecurring,
+                                onTap: () => setState(() => _isRecurring = true),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: _TypeSelectionCard(
+                                title: 'One-Time',
+                                subtitle: 'Single target event',
+                                icon: Icons.flag_outlined,
+                                accentColor: AppColors.green,
+                                isSelected: !_isRecurring,
+                                onTap: () => setState(() => _isRecurring = false),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 18),
+
+                        // Time & Schedule Section
+                        if (_isRecurring) ...[
+                          const Text(
+                            'HOW OFTEN DOES IT REPEAT?',
+                            style: TextStyle(
+                              color: AppColors.muted,
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 1.1,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          RecurrencePicker(
+                            key: ValueKey(_recurrence),
+                            initialValue: _recurrence,
+                            onChanged: (value) => _recurrence = value,
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'FIRST OCCURRENCE / START TIME',
+                            style: TextStyle(
+                              color: AppColors.muted,
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 1.1,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          _DateTimeButton(
+                            dateTime: _recurringAt,
+                            accentColor: AppColors.orange,
+                            onTap: _pickRecurringDateTime,
+                          ),
+                        ] else ...[
+                          const Text(
+                            'SCHEDULED TIME',
+                            style: TextStyle(
+                              color: AppColors.muted,
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 1.1,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          _DateTimeButton(
+                            dateTime: _oneTimeAt,
+                            accentColor: AppColors.green,
+                            onTap: _pickDateTime,
+                          ),
+                        ],
+
+                        const SizedBox(height: 18),
+
+                        // Notification Toggle
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: AppColors.card,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppColors.border),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: (_notify ? AppColors.green : AppColors.muted).withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Icon(
+                                  _notify ? Icons.notifications_active_rounded : Icons.notifications_off_outlined,
+                                  color: _notify ? AppColors.green : AppColors.muted,
+                                  size: 18,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'Remind Me',
+                                      style: TextStyle(
+                                        color: AppColors.white,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    Text(
+                                      _notify ? 'Notification will be sent' : 'No notifications',
+                                      style: const TextStyle(color: AppColors.muted, fontSize: 12),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Switch(
+                                value: _notify,
+                                onChanged: (value) => setState(() => _notify = value),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
                   ),
                 ),
-
-                const SizedBox(height: 20),
-
-                Text(
-                  'REPEAT EVERY',
-                  style: Theme.of(context).textTheme.labelMedium,
-                ),
-                const SizedBox(height: 8),
-                RecurrencePicker(
-                  key: ValueKey(_recurrence),
-                  initialValue: _recurrence,
-                  onChanged: (value) => _recurrence = value,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'The next occurrence is calculated from the habit start time.',
-                  style: Theme.of(context).textTheme.bodySmall
-                      ?.copyWith(color: AppColors.muted),
-                ),
-              ] else ...[
-                Text(
-                  'REMINDER DATE & TIME',
-                  style: Theme.of(context).textTheme.labelMedium,
-                ),
-                const SizedBox(height: 8),
-                InkWell(
-                  onTap: _pickDateTime,
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: AppColors.card,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.border),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.calendar_month_outlined,
-                          color: AppColors.green,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            DateFormat('EEE, d MMM yyyy · hh:mm a')
-                                .format(_oneTimeAt),
-                          ),
-                        ),
-                        const Icon(
-                          Icons.chevron_right_rounded,
-                          color: AppColors.muted,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-              const SizedBox(height: 20),
-              SwitchListTile.adaptive(
-                contentPadding: EdgeInsets.zero,
-                value: _notify,
-                activeColor: AppColors.green,
-                title: const Text('Notifications'),
-                subtitle: Text(
-                  _notify
-                      ? 'Receive reminders for this habit'
-                      : 'No notifications will be scheduled',
-                  style: const TextStyle(color: AppColors.muted),
-                ),
-                secondary: const Icon(Icons.notifications_active_outlined),
-                onChanged: (value) => setState(() => _notify = value),
               ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: _saving ? null : _save,
-                  icon: _saving
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.check_rounded),
-                  label: Text(
-                    _saving
-                        ? 'Saving...'
-                        : (_isEditing ? 'Save changes' : 'Create habit'),
-                  ),
+
+              // Footer Actions
+              Container(
+                padding: const EdgeInsets.fromLTRB(20, 14, 20, 18),
+                decoration: const BoxDecoration(
+                  color: AppColors.card,
+                  border: Border(top: BorderSide(color: AppColors.border)),
+                ),
+                child: Row(
+                  children: [
+                    if (_isEditing) ...[
+                      IconButton(
+                        tooltip: 'Delete Habit',
+                        onPressed: _saving ? null : _delete,
+                        style: IconButton.styleFrom(
+                          backgroundColor: AppColors.orange.withValues(alpha: 0.12),
+                          foregroundColor: AppColors.orange,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        icon: const Icon(Icons.delete_outline_rounded, size: 20),
+                      ),
+                      const SizedBox(width: 10),
+                    ],
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: _saving ? null : _save,
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.green,
+                          foregroundColor: AppColors.black,
+                          padding: const EdgeInsets.symmetric(vertical: 13),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        child: _saving
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.black),
+                              )
+                            : Text(
+                                _isEditing ? 'Save Changes' : 'Create Habit',
+                                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                              ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              if (_isEditing) ...[
-                const SizedBox(height: 10),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: _saving ? null : _delete,
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.orange,
-                      side: const BorderSide(color: AppColors.orange),
-                    ),
-                    icon: const Icon(Icons.delete_outline_rounded),
-                    label: const Text('Delete habit'),
-                  ),
-                ),
-              ],
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TypeSelectionCard extends StatelessWidget {
+  const _TypeSelectionCard({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.accentColor,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Color accentColor;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isSelected ? accentColor.withValues(alpha: 0.12) : AppColors.card,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? accentColor : AppColors.border,
+            width: isSelected ? 1.4 : 1.0,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, size: 18, color: isSelected ? accentColor : AppColors.muted),
+                const Spacer(),
+                Icon(
+                  isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                  size: 16,
+                  color: isSelected ? accentColor : AppColors.muted,
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              title,
+              style: TextStyle(
+                color: isSelected ? AppColors.white : AppColors.muted,
+                fontWeight: FontWeight.w700,
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              subtitle,
+              style: const TextStyle(color: AppColors.muted, fontSize: 11),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DateTimeButton extends StatelessWidget {
+  const _DateTimeButton({
+    required this.dateTime,
+    required this.accentColor,
+    required this.onTap,
+  });
+
+  final DateTime dateTime;
+  final Color accentColor;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppColors.card,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.calendar_month_outlined, color: accentColor, size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                DateFormat('EEE, d MMM yyyy · hh:mm a').format(dateTime),
+                style: const TextStyle(
+                  color: AppColors.white,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+            const Icon(Icons.edit_calendar_outlined, size: 18, color: AppColors.muted),
+          ],
         ),
       ),
     );

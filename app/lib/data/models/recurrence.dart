@@ -64,6 +64,43 @@ class Recurrence {
     return List.generate(count, (i) => occurrence(anchor, start + i));
   }
 
+  /// Checks if an occurrence lands on the given calendar date (ignoring hour/min).
+  bool occursOnDate(DateTime anchor, DateTime targetDate) {
+    // If target date is before anchor day, cannot occur
+    final targetStartOfDay = DateTime(targetDate.year, targetDate.month, targetDate.day);
+    final anchorStartOfDay = DateTime(anchor.year, anchor.month, anchor.day);
+    if (targetStartOfDay.isBefore(anchorStartOfDay)) {
+      return false;
+    }
+
+    switch (unit) {
+      case RecurUnit.minutes:
+      case RecurUnit.hours:
+        // Intraday recurrence: occurs every day from anchor onward
+        return true;
+
+      case RecurUnit.days:
+        final diffDays = targetStartOfDay.difference(anchorStartOfDay).inDays;
+        return diffDays >= 0 && (diffDays % interval == 0);
+
+      case RecurUnit.months:
+        final totalMonths = (targetDate.year - anchor.year) * 12 + (targetDate.month - anchor.month);
+        if (totalMonths < 0 || totalMonths % interval != 0) return false;
+        // Check day match (with clamped last-day-of-month logic)
+        final lastDay = DateTime(targetDate.year, targetDate.month + 1, 0).day;
+        final expectedDay = min(anchor.day, lastDay);
+        return targetDate.day == expectedDay;
+
+      case RecurUnit.years:
+        final yearDiff = targetDate.year - anchor.year;
+        if (yearDiff < 0 || yearDiff % interval != 0) return false;
+        if (targetDate.month != anchor.month) return false;
+        final lastDay = DateTime(targetDate.year, targetDate.month + 1, 0).day;
+        final expectedDay = min(anchor.day, lastDay);
+        return targetDate.day == expectedDay;
+    }
+  }
+
   int _nextIndex(DateTime anchor, DateTime now) {
     var index = max(0, _estimate(anchor, now) - 1);
 
