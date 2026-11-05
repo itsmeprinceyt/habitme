@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:habit_me/core/constants/app_constants.dart';
 import 'package:habit_me/core/logic/providers.dart';
 import 'package:habit_me/core/theme/app_colors.dart';
+import 'package:habit_me/core/ui/drawer/manage_labels_sheet.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class AppDrawer extends ConsumerWidget {
@@ -30,11 +31,12 @@ class AppDrawer extends ConsumerWidget {
       try {
         final summary = await service.importSql();
         if (summary == null) return;
+        await ref.read(labelControllerProvider.notifier).build();
         await ref.read(habitControllerProvider.notifier).reconcile();
         messenger.showSnackBar(
           SnackBar(
             content: Text(
-              'Imported ${summary.habits} habits and '
+              'Imported ${summary.habits} habits, ${summary.labels} labels and '
               '${summary.completions} completions',
             ),
           ),
@@ -60,6 +62,11 @@ class AppDrawer extends ConsumerWidget {
       }
     }
 
+    void openManageLabels() {
+      navigator.pop();
+      ManageLabelsSheet.show(context);
+    }
+
     return Drawer(
       child: SafeArea(
         child: Column(
@@ -69,10 +76,19 @@ class AppDrawer extends ConsumerWidget {
             const Divider(height: 1),
             const SizedBox(height: 8),
             ListTile(
+              leading: const Icon(Icons.label_outline_rounded),
+              title: const Text('Manage Labels'),
+              subtitle: const Text(
+                'Create and organize your habit labels',
+                style: TextStyle(color: AppColors.muted),
+              ),
+              onTap: openManageLabels,
+            ),
+            ListTile(
               leading: const Icon(Icons.file_upload_outlined),
               title: const Text('Import'),
               subtitle: const Text(
-                'Restore habits from a SQL backup',
+                'Restore habits and labels from a SQL backup',
                 style: TextStyle(color: AppColors.muted),
               ),
               onTap: importBackup,
@@ -81,7 +97,7 @@ class AppDrawer extends ConsumerWidget {
               leading: const Icon(Icons.file_download_outlined),
               title: const Text('Export'),
               subtitle: const Text(
-                'Save all habits as a SQL file',
+                'Save habits and labels as a SQL file',
                 style: TextStyle(color: AppColors.muted),
               ),
               onTap: exportBackup,

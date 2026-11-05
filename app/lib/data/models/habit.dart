@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 abstract final class HabitColumns {
   static const id = 'id';
   static const name = 'name';
+  static const labelId = 'label_id';
   static const isRecurring = 'is_recurring';
   static const recurUnit = 'recur_unit';
   static const recurInterval = 'recur_interval';
@@ -22,6 +23,7 @@ class Habit {
   const Habit({
     required this.id,
     required this.name,
+    this.labelId,
     required this.recurrence,
     required this.notify,
     required this.isDone,
@@ -35,6 +37,7 @@ class Habit {
 
   factory Habit.create({
     required String name,
+    String? labelId,
     Recurrence? recurrence,
     bool notify = false,
     DateTime? oneTimeAt,
@@ -46,6 +49,7 @@ class Habit {
     return Habit(
       id: const Uuid().v4(),
       name: name.trim(),
+      labelId: labelId,
       recurrence: recurrence,
       notify: notify,
       isDone: false,
@@ -65,6 +69,7 @@ class Habit {
     return Habit(
       id: map[HabitColumns.id] as String,
       name: map[HabitColumns.name] as String,
+      labelId: map[HabitColumns.labelId] as String?,
       recurrence: recurring && unit != null && interval != null
           ? Recurrence(unit: RecurUnit.fromName(unit), interval: interval)
           : null,
@@ -81,6 +86,7 @@ class Habit {
 
   final String id;
   final String name;
+  final String? labelId;
   final Recurrence? recurrence;
   final bool notify;
   final bool isDone;
@@ -97,6 +103,7 @@ class Habit {
 
   Habit copyWith({
     String? name,
+    ValueGetter<String?>? labelId,
     ValueGetter<Recurrence?>? recurrence,
     bool? notify,
     bool? isDone,
@@ -109,6 +116,7 @@ class Habit {
     return Habit(
       id: id,
       name: name ?? this.name,
+      labelId: labelId != null ? labelId() : this.labelId,
       recurrence: recurrence != null ? recurrence() : this.recurrence,
       notify: notify ?? this.notify,
       isDone: isDone ?? this.isDone,
@@ -125,6 +133,7 @@ class Habit {
     return {
       HabitColumns.id: id,
       HabitColumns.name: name,
+      HabitColumns.labelId: labelId,
       HabitColumns.isRecurring: isRecurring ? 1 : 0,
       HabitColumns.recurUnit: recurrence?.unit.name,
       HabitColumns.recurInterval: recurrence?.interval,

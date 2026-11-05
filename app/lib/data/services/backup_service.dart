@@ -6,16 +6,22 @@ import 'package:habit_me/core/constants/app_constants.dart';
 import 'package:habit_me/data/db/app_database.dart';
 import 'package:habit_me/data/models/completion.dart';
 import 'package:habit_me/data/models/habit.dart';
+import 'package:habit_me/data/models/label.dart';
 import 'package:habit_me/data/services/sql_codec.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 class ImportSummary {
-  const ImportSummary({required this.habits, required this.completions});
+  const ImportSummary({
+    required this.habits,
+    required this.completions,
+    this.labels = 0,
+  });
 
   final int habits;
   final int completions;
+  final int labels;
 }
 
 class BackupService {
@@ -25,6 +31,10 @@ class BackupService {
 
   Future<void> exportSql() async {
     final db = await _database.database;
+    final labelRows = await db.query(
+      AppConstants.tableLabels,
+      orderBy: '${LabelColumns.name} ASC',
+    );
     final habitRows = await db.query(
       AppConstants.tableHabits,
       orderBy: '${HabitColumns.createdAt} ASC',
@@ -37,6 +47,7 @@ class BackupService {
     final content = SqlCodec.encode(
       habitRows.map(Habit.fromMap).toList(),
       completionRows.map(Completion.fromMap).toList(),
+      labelRows.map(HabitLabel.fromMap).toList(),
     );
 
     final dir = await getTemporaryDirectory();
@@ -69,10 +80,25 @@ class BackupService {
 
     final parsed = SqlCodec.decode(text);
     final db = await _database.database;
+    var labelCount = 0;
     var habitCount = 0;
     var completionCount = 0;
 
     await db.transaction((txn) async {
+      for (final row in parsed.labels) {
+        final id = row[LabelColumns.id] as String;
+        final updated = await txn.update(
+          AppConstants.tableLabels,
+          row,
+          where: '${LabelColumns.id} = ?',
+          whereArgs: [id],
+        );
+        if (updated == 0) {
+          await txn.insert(AppConstants.tableLabels, row);
+        }
+        labelCount++;
+      }
+
       final knownIds = <String>{};
 
       for (final row in parsed.habits) {
@@ -118,6 +144,10 @@ class BackupService {
       }
     });
 
-    return ImportSummary(habits: habitCount, completions: completionCount);
+    return ImportSummary(
+      habits: habitCount,
+      completions: completionCount,
+      labels: labelCount,
+    );
   }
 }

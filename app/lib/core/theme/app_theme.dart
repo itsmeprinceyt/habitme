@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:habit_me/core/theme/app_colors.dart';
 
 abstract final class AppTheme {
+  static const String defaultFontFamily = 'Roboto';
+
   static ThemeData get dark {
     const scheme = ColorScheme.dark(
       primary: AppColors.green,
@@ -17,6 +19,13 @@ abstract final class AppTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
+      fontFamily: defaultFontFamily,
+      fontFamilyFallback: const [
+        'Roboto',
+        'Arial',
+        'Helvetica',
+        'sans-serif',
+      ],
       colorScheme: scheme,
       scaffoldBackgroundColor: AppColors.black,
       canvasColor: AppColors.black,
@@ -29,6 +38,7 @@ abstract final class AppTheme {
         surfaceTintColor: Colors.transparent,
         centerTitle: false,
         titleTextStyle: TextStyle(
+          fontFamily: defaultFontFamily,
           color: AppColors.white,
           fontSize: 20,
           fontWeight: FontWeight.w700,
@@ -64,6 +74,7 @@ abstract final class AppTheme {
         foregroundColor: AppColors.green,
         elevation: 0,
         extendedTextStyle: const TextStyle(
+          fontFamily: defaultFontFamily,
           fontWeight: FontWeight.w700,
           letterSpacing: 0.2,
         ),
@@ -91,7 +102,10 @@ abstract final class AppTheme {
       ),
       snackBarTheme: SnackBarThemeData(
         backgroundColor: AppColors.card,
-        contentTextStyle: const TextStyle(color: AppColors.white),
+        contentTextStyle: const TextStyle(
+          fontFamily: defaultFontFamily,
+          color: AppColors.white,
+        ),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),

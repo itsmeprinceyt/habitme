@@ -94,6 +94,7 @@ class NotificationService {
         _channelName,
         importance: Importance.high,
         priority: Priority.high,
+        icon: '@mipmap/ic_launcher',
       ),
       iOS: DarwinNotificationDetails(),
     );

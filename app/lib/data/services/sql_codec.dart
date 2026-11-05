@@ -1,18 +1,32 @@
 import 'package:habit_me/core/constants/app_constants.dart';
 import 'package:habit_me/data/models/completion.dart';
 import 'package:habit_me/data/models/habit.dart';
+import 'package:habit_me/data/models/label.dart';
 
 class ParsedBackup {
-  const ParsedBackup({required this.habits, required this.completions});
+  const ParsedBackup({
+    required this.habits,
+    required this.completions,
+    this.labels = const [],
+  });
 
   final List<Map<String, Object?>> habits;
   final List<Map<String, Object?>> completions;
+  final List<Map<String, Object?>> labels;
 }
 
 abstract final class SqlCodec {
+  static const _labelColumns = [
+    LabelColumns.id,
+    LabelColumns.name,
+    LabelColumns.color,
+    LabelColumns.createdAt,
+  ];
+
   static const _habitColumns = [
     HabitColumns.id,
     HabitColumns.name,
+    HabitColumns.labelId,
     HabitColumns.isRecurring,
     HabitColumns.recurUnit,
     HabitColumns.recurInterval,
@@ -31,12 +45,20 @@ abstract final class SqlCodec {
     CompletionColumns.completedAt,
   ];
 
-  static String encode(List<Habit> habits, List<Completion> completions) {
+  static String encode(
+    List<Habit> habits,
+    List<Completion> completions, [
+    List<HabitLabel> labels = const [],
+  ]) {
     final buffer = StringBuffer()
       ..writeln(AppConstants.backupMarker)
       ..writeln('-- exported ${DateTime.now().toIso8601String()}')
       ..writeln('BEGIN TRANSACTION;');
 
+    for (final label in labels) {
+      final map = label.toMap();
+      buffer.writeln(_statement(AppConstants.tableLabels, _labelColumns, map));
+    }
     for (final habit in habits) {
       final map = habit.toMap();
       buffer.writeln(_statement(AppConstants.tableHabits, _habitColumns, map));
@@ -74,10 +96,11 @@ abstract final class SqlCodec {
       throw const FormatException('Not a HabitMe backup file');
     }
 
+    final labels = <Map<String, Object?>>[];
     final habits = <Map<String, Object?>>[];
     final completions = <Map<String, Object?>>[];
     final statement = RegExp(
-      r'INSERT(?:\s+OR\s+REPLACE)?\s+INTO\s+(habits|completions)\s*\(([^)]*)\)\s*VALUES\s*\(',
+      r'INSERT(?:\s+OR\s+REPLACE)?\s+INTO\s+(habits|completions|labels)\s*\(([^)]*)\)\s*VALUES\s*\(',
       caseSensitive: false,
     );
 
@@ -115,9 +138,15 @@ abstract final class SqlCodec {
 
       final table = match.group(1)!.toLowerCase();
       final columns = match.group(2)!.split(',').map((c) => c.trim()).toList();
-      final allowed = table == AppConstants.tableHabits
-          ? _habitColumns
-          : _completionColumns;
+      final List<String> allowed;
+      if (table == AppConstants.tableLabels) {
+        allowed = _labelColumns;
+      } else if (table == AppConstants.tableHabits) {
+        allowed = _habitColumns;
+      } else {
+        allowed = _completionColumns;
+      }
+
       if (columns.any((c) => !allowed.contains(c))) {
         throw const FormatException('Unknown column in backup file');
       }
@@ -132,7 +161,10 @@ abstract final class SqlCodec {
       final row = <String, Object?>{
         for (var i = 0; i < columns.length; i++) columns[i]: values[i],
       };
-      if (table == AppConstants.tableHabits) {
+      if (table == AppConstants.tableLabels) {
+        HabitLabel.fromMap(row);
+        labels.add(row);
+      } else if (table == AppConstants.tableHabits) {
         Habit.fromMap(row);
         habits.add(row);
       } else {
@@ -141,7 +173,11 @@ abstract final class SqlCodec {
       }
     }
 
-    return ParsedBackup(habits: habits, completions: completions);
+    return ParsedBackup(
+      labels: labels,
+      habits: habits,
+      completions: completions,
+    );
   }
 
   static int _skipSpace(String text, int pos) {

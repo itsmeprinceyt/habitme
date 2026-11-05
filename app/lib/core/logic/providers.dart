@@ -1,8 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:habit_me/core/logic/habit_controller.dart';
+import 'package:habit_me/core/logic/label_controller.dart';
 import 'package:habit_me/data/db/app_database.dart';
 import 'package:habit_me/data/models/habit.dart';
+import 'package:habit_me/data/models/label.dart';
 import 'package:habit_me/data/repositories/habit_repository.dart';
+import 'package:habit_me/data/repositories/label_repository.dart';
 import 'package:habit_me/core/logic/habit_scheduler.dart';
 import 'package:habit_me/data/services/backup_service.dart';
 import 'package:habit_me/data/services/notification_service.dart';
@@ -23,6 +26,15 @@ class HomeViewModeNotifier extends Notifier<HomeViewMode> {
 final homeViewModeProvider =
     NotifierProvider<HomeViewModeNotifier, HomeViewMode>(
       HomeViewModeNotifier.new,
+    );
+
+final labelRepositoryProvider = Provider<LabelRepository>(
+  (ref) => LabelRepository(AppDatabase.instance),
+);
+
+final labelControllerProvider =
+    AsyncNotifierProvider<LabelController, List<HabitLabel>>(
+      LabelController.new,
     );
 
 final habitRepositoryProvider = Provider<HabitRepository>(

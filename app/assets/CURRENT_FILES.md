@@ -1,4 +1,4 @@
-# HabitMe – Project File Map
+# HabitMe – Project File Map & Current Status
 
 **Package name:** `habit_me`
 
@@ -16,11 +16,13 @@ lib/
 │   ├── logic/
 │   │   ├── providers.dart
 │   │   ├── habit_controller.dart
+│   │   ├── label_controller.dart
 │   │   └── habit_scheduler.dart
 │   │
 │   ├── utils/
 │   │   ├── date_utils.dart
-│   │   └── duration_format.dart
+│   │   ├── duration_format.dart
+│   │   └── expansion_preferences.dart
 │   │
 │   ├── theme/
 │   │   ├── app_colors.dart
@@ -28,7 +30,8 @@ lib/
 │   │
 │   └── ui/
 │       ├── drawer/
-│       │   └── app_drawer.dart
+│       │   ├── app_drawer.dart
+│       │   └── manage_labels_sheet.dart
 │       │
 │       ├── home/
 │       │   ├── habit_list_view.dart
@@ -42,6 +45,7 @@ lib/
 │       │
 │       └── widgets/
 │           ├── section_header.dart
+│           ├── label_subheader.dart
 │           └── countdown_text.dart
 │
 └── data/
@@ -50,10 +54,12 @@ lib/
     │
     ├── models/
     │   ├── recurrence.dart
+    │   ├── label.dart
     │   ├── habit.dart
     │   └── completion.dart
     │
     ├── repositories/
+    │   ├── label_repository.dart
     │   └── habit_repository.dart
     │
     └── services/
@@ -62,143 +68,77 @@ lib/
         └── sql_codec.dart
 ```
 
-## Completed Work
+---
 
-### Step 1 – Project Setup & UI Foundation
+## Detailed Step-by-Step Status
 
-- [x] Flutter project scaffold
-- [x] Application theme and colors
-- [x] App drawer
-- [x] Home screen
-- [x] List / Calendar view toggle
+### Step 1 – Project Setup, App Theme & Clean Typography
+- [x] Flutter project scaffolded with Riverpod state management.
+- [x] Pure dark theme design system (`#000000` pitch black, `#0D0D0D` surfaces, `#141414` cards, `#262626` borders).
+- [x] Standard font fix: Explicit font family setup (`Roboto` with fallback to standard sans-serifs) across all themes and text elements for uniform look on all devices.
+- [x] Redesigned drawer with rounded logo asset, custom tagline, and "Made by ItsMe Prince" card.
 
-### Step 2 – Data Layer
+### Step 2 – Database & Data Layer (v2 with Grouping/Labels)
+- [x] SQLite database version 2 with foreign keys enabled (`PRAGMA foreign_keys = ON`).
+- [x] `labels` table: `id`, `name`, `color`, `created_at`.
+- [x] `habits` table: added `label_id` foreign key referencing `labels(id) ON DELETE SET NULL`.
+- [x] `completions` table: historical completion logs cascade-deleted on habit deletion.
+- [x] Models: `Habit`, `HabitLabel`, `Recurrence`, `Completion` with immutable copyWith and map serialization.
+- [x] Repositories: `HabitRepository` and `LabelRepository`.
 
-- [x] Habit model
-- [x] Recurrence model
-- [x] Completion model
-- [x] SQLite database setup
-- [x] Habit repository
-- [x] Database CRUD operations
+### Step 3 – Habit Management, Dynamic Colors & Label Sub-Grouping
+- [x] Dynamic Label Colors: Tile icons and background tints dynamically adopt the habit's assigned label color; unassigned habits use clean neutral grey (`AppColors.muted`).
+- [x] Orange Accent Isolation: Confined strictly to the "Completed" section indicator. All habit subheadings/status strings render in clean white.
+- [x] A-Z Label Sub-Grouping: Active and Completed sections group habits into alphabetical label sub-sections with interactive subheaders (`LabelSubheader`).
+- [x] Single-Label Constraint: Enforced across creation and updates; switching a label cleanly unbinds the previous one.
+- [x] Drawer "Manage Labels" modal dialog: Add labels with 8-color palette, rename, and delete without losing existing habits.
+- [x] Toggle / Untoggle: Habits can be marked complete and toggled back to active seamlessly.
+- [x] Expansion State Persistence: Remembers expanded/collapsed state of sections, label groups, and individual habit tiles across app re-opens via `ExpansionPreferences`.
 
-### Step 3 – Habit Management & List UI
+### Step 4 – Notifications & Custom Icon
+- [x] `flutter_local_notifications` with timezone synchronization.
+- [x] Exact and inexact alarm permission flows for Android 13+.
+- [x] Official app logo icon (`@mipmap/ic_launcher` synced from `assets/habitme_logo_rounded.png`) used for notifications instead of default Flutter icon.
+- [x] Lazy reconciliation on app start and resume (`HabitScheduler.reconcile`).
+- [x] Pending notification rolling cap (40 per habit, 60 global).
 
-- [x] Habit controller using Riverpod AsyncNotifier
-- [x] Habit providers
-- [x] Active habits section
-- [x] Completed habits section
-- [x] Habit tile
-- [x] Mark habit as completed and untoggle back to active
-- [x] Swipe to delete with confirmation
-- [x] Empty states
-- [x] Derived providers for active and completed habits
-
-### Step 4 – Scheduling & Notifications
-
-- [x] Notification service using flutter_local_notifications
-- [x] Device timezone synchronization
-- [x] Notification permission handling
-- [x] Exact alarm permission handling (Android)
-- [x] Habit scheduler
-- [x] Recurring habit reconciliation
-- [x] Upcoming reminder generation
-- [x] Per-habit notification cap
-- [x] Global notification cap
-- [x] Notification synchronization on habit CRUD
-- [x] App startup reconciliation
-- [x] App resume reconciliation
-
-### Step 5 – Habit Creation & Editing
-
-- [x] Modern center popup modal dialog for Habit Creation & Editing
-- [x] User-friendly wording ('Frequency', 'Repeat every...', 'Daily', 'Weekly', 'Monthly' quick presets)
-- [x] Recurrence picker with conversational phrasing and natural chip presets
-- [x] Create habit functionality
-- [x] Edit existing habits
-- [x] One-time habit scheduling
-- [x] Recurring habit configuration
-- [x] Notification preference toggle
-- [x] Form validation
-- [x] Integration with existing HabitController
-- [x] Notification synchronization after habit changes
-- [x] Delete button in edit mode (with confirmation dialog)
+### Step 5 – Center Popup Habit Creation & Editing
+- [x] Modern center popup modal dialog replacing bottom sheet (`maxWidth: 480`).
+- [x] Conversational repeat builder with one-tap quick presets (Daily, Weekly, Monthly, Every 2 days, Hourly).
+- [x] Inline label picker chip list with quick "+ New Label" creation dialog.
+- [x] Grey stone black styling for Recurring / One-time selector cards.
+- [x] Clean neutral delete confirmation and action styling.
 
 ### Step 6 – Date & Countdown Utilities
-
-- [x] `lib/core/utils/date_utils.dart`
-- [x] `lib/core/utils/duration_format.dart`
-- [x] `lib/core/ui/widgets/countdown_text.dart`
-- [x] Relative date formatting (Today, Tomorrow, Yesterday, date + time)
-- [x] Live ticking countdown display with tabular figures
-- [x] Next due date / completion date display
-- [x] Human-readable duration formatting & overdue handling
-- [x] Section expandable/collapsible toggle with smooth rotation animation
-- [x] Habit tile full text display without text truncation or ellipsis
-- [x] Responsive layout with slick border glow and styling
+- [x] `AppDateUtils`: Relative dates (Today, Tomorrow, Yesterday, date & time).
+- [x] `DurationFormat`: Formats remaining time into human-friendly countdowns and handles overdue intervals.
+- [x] `CountdownText`: Live per-second ticking countdown widget using `FontFeature.tabularFigures()` to prevent jitter.
+- [x] Zero-truncation responsive layouts across compact and tablet viewports.
 
 ### Step 7 – Calendar Integration
+- [x] `TableCalendar` with dynamic habit occurrence mapping.
+- [x] Dynamic label-colored dots on calendar days (matching assigned label colors, or neutral grey if unlabelled; dual-color pill when multiple colors meet).
+- [x] Independent filter buttons for One-Time and Recurring in grey-stone black styling.
+- [x] Interactive day view showing categorized habits with quick completion toggle and edit sheet access.
 
-- [x] Display habits on calendar with dynamic event loading
-- [x] Filter chips toggle for One-Time and Recurring habits (both can be toggled independently)
-- [x] Creative markers: Green dot for One-Time, Orange dot for Recurring, and a dual-colored gradient pill when both exist on the same day
-- [x] Weekend colors fixed to match theme (muted clean look instead of forced orange)
-- [x] Navigate between months and select dates
-- [x] Interactive selected day breakdown showing recurring & one-time habits with direct completion toggle and edit sheet tap
-- [x] Full text visibility without ellipsis truncation
-
-### Step 8 – Backup & Import/Export
-
-- [x] `lib/data/services/backup_service.dart`
-- [x] `lib/data/services/sql_codec.dart`
-- [x] SQL database export (share sheet, `habitme_backup_<timestamp>.sql`)
-- [x] SQL database import (file picker, merge by habit id)
-- [x] Backup validation and error handling (marker check, column whitelist, no raw SQL execution)
-- [x] Restore existing backups (habits + completions, list refresh, notifications rescheduled)
-- [x] `backupServiceProvider` in `providers.dart`
-- [x] `url_launcher` dependency and Android `<queries>` entry for https
-
-### Step 8b – UI Polish (done alongside)
-
-- [x] Drawer redesign: rounded logo (`assets/habitme_logo_rounded.png`), tagline
-- [x] "Made by ItsMe Prince" card opening https://www.itsmeprince.com
-- [x] Drawer Import / Export wired to SQL backup
-- [x] Safe-area handling on home body (`SafeArea(top: false)`)
-- [x] Floating action button restyled (card background, green foreground, border)
-- [x] Drawer background configurable via `drawerTheme` in `app_theme.dart`
-
-### Step 9 – Testing & Final Polish
-
-- [x] Zero-truncation responsiveness testing across compact & tablet viewports
-- [ ] Test notification scheduling on Android
-- [ ] Test exact and inexact alarms
-- [ ] Test recurring habit reset
-- [ ] Test timezone changes
-- [ ] Test app restart and resume
-- [ ] Test notification permissions denied
-- [ ] Test habit creation and editing
-- [ ] Test one-time and recurring habits
-- [ ] Test backup and restore
-- [ ] Run `flutter analyze`
-- [ ] Resolve remaining warnings and errors
+### Step 8 – SQL Backup & Import/Export (with Labels)
+- [x] Full SQL export capturing `labels`, `habits`, and `completions` in a single transaction.
+- [x] Share sheet export (`habitme_backup_<timestamp>.sql`) and file picker restore.
+- [x] Safe SQL import parser with column and table whitelisting (never executes raw arbitrary SQL).
+- [x] Merge logic: updates existing records by ID and inserts new ones while preserving completion histories.
 
 ---
 
-## Current Progress
+## Current Progress Table
 
-| Step | Description                   | Status                  |
-| ---- | ----------------------------- | ----------------------- |
-| 1    | Project Setup & UI Foundation | Complete                |
-| 2    | Data Layer                    | Complete                |
-| 3    | Habit Management & List UI    | Complete                |
-| 4    | Scheduling & Notifications    | Implemented             |
-| 5    | Habit Creation & Editing      | Complete (Popup Redone) |
-| 6    | Date & Countdown Utilities    | Complete                |
-| 7    | Calendar Integration          | Complete                |
-| 8    | Backup & Import/Export        | Complete                |
-| 9    | Testing & Final Polish        | In Progress             |
-
-## Current Milestone
-
-**Implemented:** Center popup habit dialog with natural wording & quick presets, responsive zero-truncation layout, calendar filtering with gradient badges, expandable habit tiles with live ticking countdowns, and SQL backup import/export.
-
-**Next milestone:** Step 9 – Testing & Final Polish.
+| Step | Description                                         | Status   |
+| ---- | --------------------------------------------------- | -------- |
+| 1    | Project Setup, Clean Dark Theme & Standard Typography | Complete |
+| 2    | Data Layer & SQLite v2 (Labels & Habits)            | Complete |
+| 3    | List UI, A-Z Label Groups & Color Sync              | Complete |
+| 4    | Scheduling, Boot Receiver & Custom Notification Logo | Complete |
+| 5    | Habit Creation Center Popup & Preset Picker         | Complete |
+| 6    | Date & Live Countdown Utilities                     | Complete |
+| 7    | Calendar View with Dynamic Label Markers            | Complete |
+| 8    | SQL Backup & Restore (Full Labels Sync)             | Complete |
+| 9    | State Persistence & Responsiveness Verification     | Complete |
