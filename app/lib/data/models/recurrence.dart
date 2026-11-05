@@ -32,26 +32,30 @@ class Recurrence {
     return 'Every $interval ${unit.label.toLowerCase()}';
   }
 
+  /// Truncates to minute precision — schedules never carry seconds.
+  static DateTime minuteOf(DateTime dt) =>
+      DateTime(dt.year, dt.month, dt.day, dt.hour, dt.minute);
+
   DateTime occurrence(DateTime anchor, int index) {
+    final base = minuteOf(anchor);
     final steps = interval * index;
     switch (unit) {
       case RecurUnit.minutes:
-        return anchor.add(Duration(minutes: steps));
+        return base.add(Duration(minutes: steps));
       case RecurUnit.hours:
-        return anchor.add(Duration(hours: steps));
+        return base.add(Duration(hours: steps));
       case RecurUnit.days:
         return DateTime(
-          anchor.year,
-          anchor.month,
-          anchor.day + steps,
-          anchor.hour,
-          anchor.minute,
-          anchor.second,
+          base.year,
+          base.month,
+          base.day + steps,
+          base.hour,
+          base.minute,
         );
       case RecurUnit.months:
-        return _addMonths(anchor, steps);
+        return _addMonths(base, steps);
       case RecurUnit.years:
-        return _addMonths(anchor, steps * 12);
+        return _addMonths(base, steps * 12);
     }
   }
 
@@ -67,7 +71,11 @@ class Recurrence {
   /// Checks if an occurrence lands on the given calendar date (ignoring hour/min).
   bool occursOnDate(DateTime anchor, DateTime targetDate) {
     // If target date is before anchor day, cannot occur
-    final targetStartOfDay = DateTime(targetDate.year, targetDate.month, targetDate.day);
+    final targetStartOfDay = DateTime(
+      targetDate.year,
+      targetDate.month,
+      targetDate.day,
+    );
     final anchorStartOfDay = DateTime(anchor.year, anchor.month, anchor.day);
     if (targetStartOfDay.isBefore(anchorStartOfDay)) {
       return false;
@@ -81,11 +89,13 @@ class Recurrence {
 
       case RecurUnit.days:
         final diffDays = targetStartOfDay.difference(anchorStartOfDay).inDays;
-        return diffDays >= 0 && (diffDays % interval == 0);
+        return diffDays >= 0 && (diffDays % _step == 0);
 
       case RecurUnit.months:
-        final totalMonths = (targetDate.year - anchor.year) * 12 + (targetDate.month - anchor.month);
-        if (totalMonths < 0 || totalMonths % interval != 0) return false;
+        final totalMonths =
+            (targetDate.year - anchor.year) * 12 +
+            (targetDate.month - anchor.month);
+        if (totalMonths < 0 || totalMonths % _step != 0) return false;
         // Check day match (with clamped last-day-of-month logic)
         final lastDay = DateTime(targetDate.year, targetDate.month + 1, 0).day;
         final expectedDay = min(anchor.day, lastDay);
@@ -93,7 +103,7 @@ class Recurrence {
 
       case RecurUnit.years:
         final yearDiff = targetDate.year - anchor.year;
-        if (yearDiff < 0 || yearDiff % interval != 0) return false;
+        if (yearDiff < 0 || yearDiff % _step != 0) return false;
         if (targetDate.month != anchor.month) return false;
         final lastDay = DateTime(targetDate.year, targetDate.month + 1, 0).day;
         final expectedDay = min(anchor.day, lastDay);
@@ -104,6 +114,7 @@ class Recurrence {
   int _nextIndex(DateTime anchor, DateTime now) {
     var index = max(0, _estimate(anchor, now) - 1);
 
+    // The step is always at least one minute, so this walk terminates.
     while (!occurrence(anchor, index).isAfter(now)) {
       index++;
     }
@@ -117,17 +128,22 @@ class Recurrence {
         (now.year - anchor.year) * 12 + (now.month - anchor.month);
     switch (unit) {
       case RecurUnit.minutes:
-        return diff.inMinutes ~/ interval;
+        return diff.inMinutes ~/ _step;
       case RecurUnit.hours:
-        return diff.inHours ~/ interval;
+        return diff.inHours ~/ _step;
       case RecurUnit.days:
-        return diff.inDays ~/ interval;
+        return diff.inDays ~/ _step;
       case RecurUnit.months:
-        return monthDiff ~/ interval;
+        return monthDiff ~/ _step;
       case RecurUnit.years:
-        return monthDiff ~/ (interval * 12);
+        return monthDiff ~/ (_step * 12);
     }
   }
+
+  /// Interval as actually used by the maths. A row that somehow carries 0 or a
+  /// negative value would otherwise divide by zero, or - worse - make
+  /// [_nextIndex] loop forever, so the step is floored at one.
+  int get _step => interval < 1 ? 1 : interval;
 
   static DateTime _addMonths(DateTime anchor, int months) {
     final total = anchor.year * 12 + (anchor.month - 1) + months;
@@ -135,13 +151,6 @@ class Recurrence {
     final month = total % 12 + 1;
     final lastDay = DateTime(year, month + 1, 0).day;
     final day = min(anchor.day, lastDay);
-    return DateTime(
-      year,
-      month,
-      day,
-      anchor.hour,
-      anchor.minute,
-      anchor.second,
-    );
+    return DateTime(year, month, day, anchor.hour, anchor.minute);
   }
 }

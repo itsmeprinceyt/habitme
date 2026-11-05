@@ -95,7 +95,8 @@ class _ManageLabelsSheetState extends ConsumerState<ManageLabelsSheet> {
               ),
               const SizedBox(height: 8),
               Wrap(
-                spacing: 8,
+                spacing: 10,
+                runSpacing: 10,
                 children: _palette.map((c) {
                   final isSel = color == c.toARGB32();
                   return InkWell(
@@ -128,7 +129,7 @@ class _ManageLabelsSheetState extends ConsumerState<ManageLabelsSheet> {
               onPressed: () => Navigator.of(ctx).pop(true),
               child: const Text(
                 'Save',
-                style: TextStyle(color: AppColors.green),
+                style: TextStyle(color: AppColors.accent),
               ),
             ),
           ],
@@ -214,12 +215,12 @@ class _ManageLabelsSheetState extends ConsumerState<ManageLabelsSheet> {
                       width: 36,
                       height: 36,
                       decoration: BoxDecoration(
-                        color: AppColors.green.withValues(alpha: 0.15),
+                        gradient: AppColors.accentGradient,
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: const Icon(
                         Icons.label_rounded,
-                        color: AppColors.green,
+                        color: AppColors.black,
                         size: 20,
                       ),
                     ),
@@ -284,7 +285,7 @@ class _ManageLabelsSheetState extends ConsumerState<ManageLabelsSheet> {
                           tooltip: 'Add Label',
                           onPressed: _createLabel,
                           style: IconButton.styleFrom(
-                            backgroundColor: AppColors.green,
+                            backgroundColor: AppColors.accent,
                             foregroundColor: AppColors.black,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(10),

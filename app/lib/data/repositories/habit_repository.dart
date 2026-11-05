@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:habit_me/core/constants/app_constants.dart';
 import 'package:habit_me/data/db/app_database.dart';
 import 'package:habit_me/data/models/completion.dart';
@@ -14,7 +15,16 @@ class HabitRepository {
       AppConstants.tableHabits,
       orderBy: '${HabitColumns.createdAt} DESC',
     );
-    return rows.map(Habit.fromMap).toList();
+    final habits = <Habit>[];
+    for (final row in rows) {
+      try {
+        habits.add(Habit.fromMap(row));
+      } catch (error) {
+        // One unreadable row must not take the entire list down with it.
+        debugPrint('Skipping unreadable habit row "${row['id']}": $error');
+      }
+    }
+    return habits;
   }
 
   Future<Habit?> getById(String id) async {

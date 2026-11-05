@@ -1,0 +1,9 @@
+Things to fix:
+
+- make it so that gradient looks from left to right full gradient like 80% ?
+- Show proper full HH MM SS Countdown
+
+
+When above is done:
+
+1. I have this code, I want to integrate the ad mob so create a sidebar button that says Support me -> and when we click on that it'll show a thank you message then trigger the full screen reward ad to trigger.

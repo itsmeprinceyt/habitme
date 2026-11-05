@@ -50,7 +50,10 @@ class SectionHeader extends StatelessWidget {
                 ),
                 const SizedBox(width: 10),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: accent.withValues(alpha: 0.16),
                     borderRadius: BorderRadius.circular(10),

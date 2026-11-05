@@ -1,8 +1,14 @@
 
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Show notifications (Android 13+) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <!-- Exact alarm permission: user must grant special access -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+
+    <!-- Auto-granted exact alarms so reminders fire on the exact minute -->
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
 
     <!-- Restore scheduled notifications after device reboot -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
@@ -31,6 +37,12 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+
+        <!-- Processes notification action taps (e.g. "Done"), including when
+             the app is in the background or terminated -->
+        <receiver
+            android:exported="false"
+            android:name="com.dexterous.flutterlocalnotifications.ActionBroadcastReceiver" />
 
         <!-- Scheduled notification receiver -->
         <receiver

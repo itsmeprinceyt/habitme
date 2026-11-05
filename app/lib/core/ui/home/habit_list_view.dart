@@ -5,6 +5,7 @@ import 'package:habit_me/core/logic/providers.dart';
 import 'package:habit_me/core/theme/app_colors.dart';
 import 'package:habit_me/core/ui/home/habit_tile.dart';
 import 'package:habit_me/core/ui/habit_form/habit_form_sheet.dart';
+import 'package:habit_me/core/ui/widgets/animated_entrance.dart';
 import 'package:habit_me/core/ui/widgets/label_subheader.dart';
 import 'package:habit_me/core/ui/widgets/section_header.dart';
 import 'package:habit_me/core/utils/expansion_preferences.dart';
@@ -148,12 +149,46 @@ class _HabitListViewState extends ConsumerState<HabitListView> {
 
     return async.when(
       loading: () => const Center(
-        child: CircularProgressIndicator(color: AppColors.green),
+        child: CircularProgressIndicator(color: AppColors.accent),
       ),
-      error: (error, _) => const Center(
-        child: Text(
-          'Could not load habits',
-          style: TextStyle(color: AppColors.orange),
+      error: (error, _) => Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.error_outline_rounded,
+                color: AppColors.orange,
+                size: 30,
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                'Could not load habits',
+                style: TextStyle(
+                  color: AppColors.orange,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 6),
+              // The real reason, so a device-only failure can be reported.
+              Text(
+                '$error',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: AppColors.muted,
+                  fontSize: 12,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 16),
+              FilledButton.icon(
+                onPressed: () => ref.invalidate(habitControllerProvider),
+                icon: const Icon(Icons.refresh_rounded, size: 18),
+                label: const Text('Retry'),
+              ),
+            ],
+          ),
         ),
       ),
       data: (all) {
@@ -170,7 +205,7 @@ class _HabitListViewState extends ConsumerState<HabitListView> {
             SectionHeader(
               title: 'Active',
               count: active.length,
-              accent: AppColors.green,
+              accent: AppColors.accent,
               isExpanded: _isActiveExpanded,
               onToggleExpand: _toggleActive,
             ),
@@ -279,7 +314,14 @@ class _LabelGroupViewState extends State<_LabelGroupView> {
         AnimatedCrossFade(
           firstChild: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: widget.habits.map(widget.tileBuilder).toList(),
+            children: [
+              for (var i = 0; i < widget.habits.length; i++)
+                AnimatedEntrance(
+                  delay: Duration(milliseconds: i < 8 ? 50 * i : 400),
+                  duration: const Duration(milliseconds: 380),
+                  child: widget.tileBuilder(widget.habits[i]),
+                ),
+            ],
           ),
           secondChild: const SizedBox(width: double.infinity),
           crossFadeState: _isExpanded
@@ -303,7 +345,7 @@ class _EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.task_alt_rounded, size: 56, color: AppColors.green),
+            Icon(Icons.task_alt_rounded, size: 56, color: AppColors.accent),
             SizedBox(height: 16),
             Text(
               'No habits yet',

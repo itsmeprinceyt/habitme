@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Monochrome status-bar / notification icon.
+  Mirrors the HabitMe launcher mark: a grid of squares with a tick in the
+  centre. Android tints this white, so it must stay a solid silhouette.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="#FFFFFFFF">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M4,3h2a1,1 0 0 1 1,1v2a1,1 0 0 1 -1,1H4a1,1 0 0 1 -1,-1V4a1,1 0 0 1 1,-1z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M11,3h2a1,1 0 0 1 1,1v2a1,1 0 0 1 -1,1h-2a1,1 0 0 1 -1,-1V4a1,1 0 0 1 1,-1z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M18,3h2a1,1 0 0 1 1,1v2a1,1 0 0 1 -1,1h-2a1,1 0 0 1 -1,-1V4a1,1 0 0 1 1,-1z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M4,10h2a1,1 0 0 1 1,1v2a1,1 0 0 1 -1,1H4a1,1 0 0 1 -1,-1v-2a1,1 0 0 1 1,-1z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M18,10h2a1,1 0 0 1 1,1v2a1,1 0 0 1 -1,1h-2a1,1 0 0 1 -1,-1v-2a1,1 0 0 1 1,-1z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M4,17h2a1,1 0 0 1 1,1v2a1,1 0 0 1 -1,1H4a1,1 0 0 1 -1,-1v-2a1,1 0 0 1 1,-1z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M11,17h2a1,1 0 0 1 1,1v2a1,1 0 0 1 -1,1h-2a1,1 0 0 1 -1,-1v-2a1,1 0 0 1 1,-1z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M18,17h2a1,1 0 0 1 1,1v2a1,1 0 0 1 -1,1h-2a1,1 0 0 1 -1,-1v-2a1,1 0 0 1 1,-1z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M8.7,11.2L11.2,13.7L15.3,9.6L16.6,10.9L11.2,16.3L7.4,12.5z" />
+</vector>

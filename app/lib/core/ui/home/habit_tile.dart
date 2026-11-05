@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:habit_me/core/theme/app_colors.dart';
+import 'package:habit_me/core/ui/widgets/app_switch.dart';
 import 'package:habit_me/core/ui/widgets/countdown_text.dart';
+import 'package:habit_me/core/ui/widgets/gradient_border.dart';
 import 'package:habit_me/core/utils/date_utils.dart';
 import 'package:habit_me/core/utils/expansion_preferences.dart';
 import 'package:habit_me/data/models/habit.dart';
@@ -48,12 +50,15 @@ class _HabitTileState extends State<HabitTile> {
   }
 
   DateTime? get _relevantNextDate {
+    DateTime? minuteOf(DateTime? dt) => dt == null
+        ? null
+        : DateTime(dt.year, dt.month, dt.day, dt.hour, dt.minute);
     if (habit.isRecurring) {
-      return habit.nextDueAt;
+      return minuteOf(habit.nextDueAt);
     }
     // Hide next date for completed one-time habits
     if (habit.isDone) return null;
-    return habit.oneTimeAt;
+    return minuteOf(habit.oneTimeAt);
   }
 
   String get _summarySubtitle {
@@ -115,10 +120,18 @@ class _HabitTileState extends State<HabitTile> {
   Widget build(BuildContext context) {
     final label = widget.label;
     // Theme color: If label has color use it, otherwise neutral grey (muted)
-    final themeColor = label?.color != null ? Color(label!.color!) : AppColors.muted;
+    final themeColor = label?.color != null
+        ? Color(label!.color!)
+        : AppColors.accentDeep;
     final done = habit.isDone;
     final strike = done && habit.isOneTime;
     final nextTarget = _relevantNextDate;
+
+    // Label colour blended over the card so the sweep stays opaque: mixing an
+    // opaque and a translucent colour would dip towards transparency instead
+    // of fading into the card.
+    Color tint(double alpha) =>
+        Color.alphaBlend(themeColor.withValues(alpha: alpha), AppColors.card);
 
     return Dismissible(
       key: ValueKey('dismiss_${habit.id}'),
@@ -132,10 +145,7 @@ class _HabitTileState extends State<HabitTile> {
           color: AppColors.surfaceLight,
           borderRadius: BorderRadius.circular(16),
         ),
-        child: const Icon(
-          Icons.delete_outline_rounded,
-          color: AppColors.muted,
-        ),
+        child: const Icon(Icons.delete_outline_rounded, color: AppColors.muted),
       ),
       child: Material(
         color: Colors.transparent,
@@ -146,14 +156,29 @@ class _HabitTileState extends State<HabitTile> {
             duration: const Duration(milliseconds: 220),
             curve: Curves.easeInOut,
             decoration: BoxDecoration(
-              color: AppColors.card,
+              gradient: label?.color != null
+                  ? LinearGradient(
+                      // Left to right sweep: the label colour holds across
+                      // most of the card, then fades out softly near the edge.
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                      colors: [
+                        tint(0.16),
+                        tint(0.16),
+                        tint(0.06),
+                        AppColors.card,
+                      ],
+                      stops: const [0.0, 0.6, 0.84, 1.0],
+                    )
+                  : null,
+              color: label?.color != null ? null : AppColors.card,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: _isExpanded
-                    ? (label?.color != null
-                        ? themeColor.withValues(alpha: 0.5)
-                        : AppColors.white.withValues(alpha: 0.25))
-                    : AppColors.border,
+                color: label?.color != null
+                    ? themeColor.withValues(alpha: _isExpanded ? 0.55 : 0.30)
+                    : (_isExpanded
+                          ? AppColors.white.withValues(alpha: 0.25)
+                          : AppColors.border),
                 width: _isExpanded ? 1.2 : 1.0,
               ),
               boxShadow: _isExpanded && label?.color != null
@@ -178,8 +203,25 @@ class _HabitTileState extends State<HabitTile> {
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: themeColor.withValues(alpha: done ? 0.08 : 0.16),
-                        borderRadius: BorderRadius.circular(12),
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: done
+                              ? const [
+                                  AppColors.surfaceLight,
+                                  AppColors.surface,
+                                ]
+                              : [
+                                  themeColor.withValues(alpha: 0.30),
+                                  themeColor.withValues(alpha: 0.10),
+                                ],
+                        ),
+                        borderRadius: BorderRadius.circular(13),
+                        border: Border.all(
+                          color: themeColor.withValues(
+                            alpha: done ? 0.18 : 0.38,
+                          ),
+                        ),
                       ),
                       child: Icon(
                         habit.isRecurring
@@ -201,8 +243,9 @@ class _HabitTileState extends State<HabitTile> {
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
                               height: 1.25,
-                              decoration:
-                                  strike ? TextDecoration.lineThrough : null,
+                              decoration: strike
+                                  ? TextDecoration.lineThrough
+                                  : null,
                               decorationColor: AppColors.muted,
                             ),
                           ),
@@ -223,16 +266,18 @@ class _HabitTileState extends State<HabitTile> {
                                 vertical: 2,
                               ),
                               decoration: BoxDecoration(
-                                color: (label.color != null
-                                        ? Color(label.color!)
-                                        : AppColors.muted)
-                                    .withValues(alpha: 0.14),
+                                color:
+                                    (label.color != null
+                                            ? Color(label.color!)
+                                            : AppColors.muted)
+                                        .withValues(alpha: 0.14),
                                 borderRadius: BorderRadius.circular(6),
                                 border: Border.all(
-                                  color: (label.color != null
-                                          ? Color(label.color!)
-                                          : AppColors.muted)
-                                      .withValues(alpha: 0.35),
+                                  color:
+                                      (label.color != null
+                                              ? Color(label.color!)
+                                              : AppColors.muted)
+                                          .withValues(alpha: 0.35),
                                 ),
                               ),
                               child: Row(
@@ -269,10 +314,7 @@ class _HabitTileState extends State<HabitTile> {
                       onPressed: widget.onEdit,
                       icon: const Icon(Icons.edit_outlined, size: 19),
                     ),
-                    Switch(
-                      value: done,
-                      onChanged: (_) => widget.onToggle(),
-                    ),
+                    AppSwitch(value: done, onChanged: (_) => widget.onToggle()),
                   ],
                 ),
 
@@ -281,195 +323,228 @@ class _HabitTileState extends State<HabitTile> {
                   firstChild: const SizedBox(width: double.infinity),
                   secondChild: Padding(
                     padding: const EdgeInsets.only(top: 12),
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: AppColors.surfaceLight,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.border),
+                    child: GradientBorder(
+                      radius: 14,
+                      padding: const EdgeInsets.all(1),
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: label?.color != null
+                            ? [
+                                themeColor.withValues(alpha: 0.5),
+                                AppColors.border,
+                                themeColor.withValues(alpha: 0.5),
+                              ]
+                            : const [
+                                AppColors.borderStrong,
+                                AppColors.border,
+                                AppColors.borderStrong,
+                              ],
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (label != null) ...[
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.label_rounded,
-                                  size: 15,
-                                  color: label.color != null
-                                      ? Color(label.color!)
-                                      : AppColors.muted,
-                                ),
-                                const SizedBox(width: 6),
-                                const Text(
-                                  'Label:',
-                                  style: TextStyle(
-                                    color: AppColors.muted,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(13),
+                        decoration: BoxDecoration(
+                          gradient: label?.color != null
+                              ? LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                    Color.alphaBlend(
+                                      themeColor.withValues(alpha: 0.14),
+                                      const Color(0xFF1B2620),
+                                    ),
+                                    const Color(0xFF141C17),
+                                  ],
+                                )
+                              : AppColors.surfaceGradient,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (label != null) ...[
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.label_rounded,
+                                    size: 15,
+                                    color: label.color != null
+                                        ? Color(label.color!)
+                                        : AppColors.muted,
                                   ),
-                                ),
-                                const SizedBox(width: 6),
-                                Expanded(
-                                  child: Text(
-                                    label.name,
+                                  const SizedBox(width: 6),
+                                  const Text(
+                                    'Label:',
                                     style: TextStyle(
-                                      color: label.color != null
-                                          ? Color(label.color!)
-                                          : AppColors.white,
+                                      color: AppColors.muted,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      label.name,
+                                      style: TextStyle(
+                                        color: label.color != null
+                                            ? Color(label.color!)
+                                            : AppColors.white,
+                                        fontSize: 12.5,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                            ],
+                            if (nextTarget != null) ...[
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.schedule_rounded,
+                                    size: 15,
+                                    color: themeColor,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    habit.isRecurring
+                                        ? (done
+                                              ? 'Next occurrence:'
+                                              : 'Due date:')
+                                        : 'Scheduled date:',
+                                    style: const TextStyle(
+                                      color: AppColors.muted,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      AppDateUtils.formatDateTime(nextTarget),
+                                      style: const TextStyle(
+                                        color: AppColors.white,
+                                        fontSize: 12.5,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Wrap(
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                spacing: 6,
+                                runSpacing: 4,
+                                children: [
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.timer_outlined,
+                                        size: 15,
+                                        color: themeColor,
+                                      ),
+                                      const SizedBox(width: 6),
+                                      const Text(
+                                        'Countdown:',
+                                        style: TextStyle(
+                                          color: AppColors.muted,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  CountdownText(
+                                    targetDate: nextTarget,
+                                    textStyle: const TextStyle(
                                       fontSize: 12.5,
                                       fontWeight: FontWeight.w700,
                                     ),
                                   ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                          ],
-                          if (nextTarget != null) ...[
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.schedule_rounded,
-                                  size: 15,
-                                  color: themeColor,
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  habit.isRecurring
-                                      ? (done ? 'Next occurrence:' : 'Due date:')
-                                      : 'Scheduled date:',
-                                  style: const TextStyle(
-                                    color: AppColors.muted,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
+                                ],
+                              ),
+                            ] else if (done && habit.completedAt != null) ...[
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.check_circle_outline_rounded,
+                                    size: 15,
+                                    color: AppColors.green,
                                   ),
-                                ),
-                                const SizedBox(width: 6),
-                                Expanded(
-                                  child: Text(
-                                    AppDateUtils.formatDateTime(nextTarget),
-                                    style: const TextStyle(
-                                      color: AppColors.white,
-                                      fontSize: 12.5,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            Wrap(
-                              crossAxisAlignment: WrapCrossAlignment.center,
-                              spacing: 6,
-                              runSpacing: 4,
-                              children: [
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.timer_outlined,
-                                      size: 15,
-                                      color: themeColor,
-                                    ),
-                                    const SizedBox(width: 6),
-                                    const Text(
-                                      'Countdown:',
-                                      style: TextStyle(
-                                        color: AppColors.muted,
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                CountdownText(
-                                  targetDate: nextTarget,
-                                  textStyle: const TextStyle(
-                                    fontSize: 12.5,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ] else if (done && habit.completedAt != null) ...[
-                            Row(
-                              children: [
-                                const Icon(
-                                  Icons.check_circle_outline_rounded,
-                                  size: 15,
-                                  color: AppColors.green,
-                                ),
-                                const SizedBox(width: 6),
-                                const Text(
-                                  'Completed at:',
-                                  style: TextStyle(
-                                    color: AppColors.muted,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                Expanded(
-                                  child: Text(
-                                    AppDateUtils.formatDateTime(habit.completedAt!),
-                                    style: const TextStyle(
-                                      color: AppColors.white,
-                                      fontSize: 12.5,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ] else ...[
-                            const Row(
-                              children: [
-                                Icon(
-                                  Icons.info_outline_rounded,
-                                  size: 15,
-                                  color: AppColors.muted,
-                                ),
-                                SizedBox(width: 6),
-                                Expanded(
-                                  child: Text(
-                                    'No specific target time set',
+                                  const SizedBox(width: 6),
+                                  const Text(
+                                    'Completed at:',
                                     style: TextStyle(
                                       color: AppColors.muted,
                                       fontSize: 12,
+                                      fontWeight: FontWeight.w600,
                                     ),
                                   ),
-                                ),
-                              ],
-                            ),
-                          ],
-                          if (habit.notify) ...[
-                            const SizedBox(height: 8),
-                            const Row(
-                              children: [
-                                Icon(
-                                  Icons.notifications_active_outlined,
-                                  size: 14,
-                                  color: AppColors.green,
-                                ),
-                                SizedBox(width: 6),
-                                Expanded(
-                                  child: Text(
-                                    'Notifications enabled for this habit',
-                                    style: TextStyle(
-                                      color: AppColors.green,
-                                      fontSize: 11.5,
-                                      fontWeight: FontWeight.w500,
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      AppDateUtils.formatDateTime(
+                                        habit.completedAt!,
+                                      ),
+                                      style: const TextStyle(
+                                        color: AppColors.white,
+                                        fontSize: 12.5,
+                                        fontWeight: FontWeight.w600,
+                                      ),
                                     ),
                                   ),
-                                ),
-                              ],
-                            ),
+                                ],
+                              ),
+                            ] else ...[
+                              const Row(
+                                children: [
+                                  Icon(
+                                    Icons.info_outline_rounded,
+                                    size: 15,
+                                    color: AppColors.muted,
+                                  ),
+                                  SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      'No specific target time set',
+                                      style: TextStyle(
+                                        color: AppColors.muted,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                            if (habit.notify) ...[
+                              const SizedBox(height: 8),
+                              const Row(
+                                children: [
+                                  Icon(
+                                    Icons.notifications_active_outlined,
+                                    size: 14,
+                                    color: AppColors.green,
+                                  ),
+                                  SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      'Notifications enabled for this habit',
+                                      style: TextStyle(
+                                        color: AppColors.green,
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ],
-                        ],
+                        ),
                       ),
                     ),
                   ),

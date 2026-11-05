@@ -18,10 +18,15 @@ class AppDrawer extends ConsumerWidget {
     Future<void> exportBackup() async {
       navigator.pop();
       try {
-        await service.exportSql();
-      } catch (_) {
+        final fileName = await service.exportSql();
         messenger.showSnackBar(
-          const SnackBar(content: Text('Export failed. Please try again.')),
+          SnackBar(
+            content: Text('Backup ready: $fileName. Choose where to save it.'),
+          ),
+        );
+      } catch (error) {
+        messenger.showSnackBar(
+          SnackBar(content: Text('Export failed: $error')),
         );
       }
     }
@@ -33,19 +38,36 @@ class AppDrawer extends ConsumerWidget {
         if (summary == null) return;
         await ref.read(labelControllerProvider.notifier).build();
         await ref.read(habitControllerProvider.notifier).reconcile();
+
+        final notes = <String>[
+          if (summary.unlabelledHabits > 0)
+            '${summary.unlabelledHabits} habit(s) imported without a label that '
+                'was missing from this device',
+          if (summary.orphanCompletions > 0)
+            '${summary.orphanCompletions} completion(s) skipped because their '
+                'habit was not found',
+        ];
+
         messenger.showSnackBar(
           SnackBar(
+            duration: const Duration(seconds: 8),
             content: Text(
               'Imported ${summary.habits} habits, ${summary.labels} labels and '
-              '${summary.completions} completions',
+              '${summary.completions} completions'
+              '${notes.isEmpty ? '' : '. ${notes.join('; ')}'}',
             ),
           ),
         );
       } on FormatException catch (e) {
-        messenger.showSnackBar(SnackBar(content: Text(e.message)));
-      } catch (_) {
         messenger.showSnackBar(
-          const SnackBar(content: Text('Import failed. Invalid backup file.')),
+          SnackBar(
+            duration: const Duration(seconds: 8),
+            content: Text(e.message),
+          ),
+        );
+      } catch (error) {
+        messenger.showSnackBar(
+          SnackBar(content: Text('Import failed: $error')),
         );
       }
     }

@@ -45,7 +45,7 @@ interface MockHabit {
   dueText?: string;
 }
 
-const GITHUB_RELEASE_URL = "https://github.com/itsmeprinceyt/habitme/releases/tag/latest";
+const GITHUB_RELEASE_URL = "https://github.com/itsmeprinceyt/habitme/releases";
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<"list" | "calendar">("list");
@@ -102,7 +102,7 @@ export default function Home() {
           };
         }
         return h;
-      })
+      }),
     );
   };
 
@@ -145,7 +145,10 @@ export default function Home() {
             <a href="#demo" className="hover:text-white transition-colors">
               Interactive UI
             </a>
-            <a href="#architecture" className="hover:text-white transition-colors">
+            <a
+              href="#architecture"
+              className="hover:text-white transition-colors"
+            >
               Offline First
             </a>
             <a href="#about" className="hover:text-white transition-colors">
@@ -160,7 +163,8 @@ export default function Home() {
               rel="noopener noreferrer"
               className="hidden sm:inline-flex text-xs text-[#8A8A8A] hover:text-white transition-colors"
             >
-              Made by <span className="text-white ml-1 font-medium">ItsMe Prince</span>
+              Made by{" "}
+              <span className="text-white ml-1 font-medium">ItsMe Prince</span>
             </a>
             <a
               href={GITHUB_RELEASE_URL}
@@ -197,8 +201,9 @@ export default function Home() {
 
             <p className="text-base sm:text-xl text-[#8A8A8A] max-w-2xl font-normal leading-relaxed mb-10">
               A minimalist habit tracker built with zero internet permissions.
-              Engineered with a high-contrast dark palette, flexible recurring cycles,
-              exact local alarm notifications, and full SQL data sovereignty.
+              Engineered with a high-contrast dark palette, flexible recurring
+              cycles, exact local alarm notifications, and full SQL data
+              sovereignty.
             </p>
 
             <div className="flex flex-wrap items-center justify-center gap-4 text-sm font-medium">
@@ -233,45 +238,69 @@ export default function Home() {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-16 w-full">
               <div className="p-5 rounded-2xl bg-[#0D0D0D] border border-[#262626]/80 text-left flex flex-col justify-between">
                 <div className="flex items-center justify-between text-[#8A8A8A] mb-2">
-                  <span className="text-xs uppercase tracking-wider font-semibold">Mode</span>
+                  <span className="text-xs uppercase tracking-wider font-semibold">
+                    Mode
+                  </span>
                   <WifiOff className="w-4 h-4 text-[#22C55E]" />
                 </div>
                 <div>
-                  <div className="text-2xl font-bold text-white mb-0.5">100%</div>
-                  <div className="text-xs text-[#8A8A8A]">Local & Offline Only</div>
+                  <div className="text-2xl font-bold text-white mb-0.5">
+                    100%
+                  </div>
+                  <div className="text-xs text-[#8A8A8A]">
+                    Local & Offline Only
+                  </div>
                 </div>
               </div>
 
               <div className="p-5 rounded-2xl bg-[#0D0D0D] border border-[#262626]/80 text-left flex flex-col justify-between">
                 <div className="flex items-center justify-between text-[#8A8A8A] mb-2">
-                  <span className="text-xs uppercase tracking-wider font-semibold">Telemetry</span>
+                  <span className="text-xs uppercase tracking-wider font-semibold">
+                    Telemetry
+                  </span>
                   <ShieldCheck className="w-4 h-4 text-[#22C55E]" />
                 </div>
                 <div>
-                  <div className="text-2xl font-bold text-[#22C55E] mb-0.5">0 KB</div>
-                  <div className="text-xs text-[#8A8A8A]">Data Leaves Your Device</div>
+                  <div className="text-2xl font-bold text-[#22C55E] mb-0.5">
+                    0 KB
+                  </div>
+                  <div className="text-xs text-[#8A8A8A]">
+                    Data Leaves Your Device
+                  </div>
                 </div>
               </div>
 
               <div className="p-5 rounded-2xl bg-[#0D0D0D] border border-[#262626]/80 text-left flex flex-col justify-between">
                 <div className="flex items-center justify-between text-[#8A8A8A] mb-2">
-                  <span className="text-xs uppercase tracking-wider font-semibold">Intervals</span>
+                  <span className="text-xs uppercase tracking-wider font-semibold">
+                    Intervals
+                  </span>
                   <Clock className="w-4 h-4 text-[#FF8A00]" />
                 </div>
                 <div>
-                  <div className="text-2xl font-bold text-[#FF8A00] mb-0.5">6 Units</div>
-                  <div className="text-xs text-[#8A8A8A]">Minutes, Hours, Days, etc.</div>
+                  <div className="text-2xl font-bold text-[#FF8A00] mb-0.5">
+                    6 Units
+                  </div>
+                  <div className="text-xs text-[#8A8A8A]">
+                    Minutes, Hours, Days, etc.
+                  </div>
                 </div>
               </div>
 
               <div className="p-5 rounded-2xl bg-[#0D0D0D] border border-[#262626]/80 text-left flex flex-col justify-between">
                 <div className="flex items-center justify-between text-[#8A8A8A] mb-2">
-                  <span className="text-xs uppercase tracking-wider font-semibold">Storage</span>
+                  <span className="text-xs uppercase tracking-wider font-semibold">
+                    Storage
+                  </span>
                   <Database className="w-4 h-4 text-white" />
                 </div>
                 <div>
-                  <div className="text-2xl font-bold text-white mb-0.5">SQLite</div>
-                  <div className="text-xs text-[#8A8A8A]">Direct SQL Export & Import</div>
+                  <div className="text-2xl font-bold text-white mb-0.5">
+                    SQLite
+                  </div>
+                  <div className="text-xs text-[#8A8A8A]">
+                    Direct SQL Export & Import
+                  </div>
                 </div>
               </div>
             </div>
@@ -279,7 +308,10 @@ export default function Home() {
         </section>
 
         {/* INTERACTIVE FLUTTER APP MOCKUP SECTION */}
-        <section id="demo" className="py-20 px-6 sm:px-10 border-y border-[#262626] bg-[#0A0A0A]/60">
+        <section
+          id="demo"
+          className="py-20 px-6 sm:px-10 border-y border-[#262626] bg-[#0A0A0A]/60"
+        >
           <div className="max-w-7xl mx-auto flex flex-col items-center">
             <div className="text-center mb-12">
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#141414] border border-[#262626] text-xs text-[#22C55E] font-medium mb-3">
@@ -290,10 +322,13 @@ export default function Home() {
                 Experience the Mobile App UI
               </h2>
               <p className="text-sm sm:text-base text-[#8A8A8A] max-w-lg mt-2 mx-auto">
-                Built matching the exact design tokens, typography, dark theme palette,
-                and layout of the Flutter application. Tap checkmarks to toggle habits!
+                Built matching the exact design tokens, typography, dark theme
+                palette, and layout of the Flutter application. Tap checkmarks
+                to toggle habits!
               </p>
-              <p className="text-[10px] text-[#8A8A8A] mt-2 italic">*Does not represent the final product*</p>
+              <p className="text-[10px] text-[#8A8A8A] mt-2 italic">
+                *Does not represent the final product*
+              </p>
             </div>
 
             {/* Mobile Device Frame */}
@@ -327,14 +362,20 @@ export default function Home() {
                     >
                       <Menu className="w-5 h-5" />
                     </button>
-                    <span className="font-bold text-lg tracking-tight">HabitMe</span>
+                    <span className="font-bold text-lg tracking-tight">
+                      HabitMe
+                    </span>
                   </div>
 
                   <div className="flex items-center gap-1">
                     <button
-                      onClick={() => setActiveTab(activeTab === "list" ? "calendar" : "list")}
+                      onClick={() =>
+                        setActiveTab(activeTab === "list" ? "calendar" : "list")
+                      }
                       className="p-2 text-white hover:bg-[#141414] rounded-lg transition"
-                      title={activeTab === "list" ? "Show calendar" : "Show list"}
+                      title={
+                        activeTab === "list" ? "Show calendar" : "Show list"
+                      }
                     >
                       {activeTab === "list" ? (
                         <CalendarIcon className="w-5 h-5 text-white" />
@@ -374,14 +415,20 @@ export default function Home() {
                             Data & Storage
                           </div>
                           <button
-                            onClick={() => alert("Simulated: Export habits to .sql backup file")}
+                            onClick={() =>
+                              alert(
+                                "Simulated: Export habits to .sql backup file",
+                              )
+                            }
                             className="w-full flex items-center gap-3 px-3 py-2.5 text-xs font-medium rounded-xl hover:bg-[#1f1f1f] text-left transition"
                           >
                             <Download className="w-4 h-4 text-[#22C55E]" />
                             <span>Export Backup (SQL)</span>
                           </button>
                           <button
-                            onClick={() => alert("Simulated: Import habits from .sql backup")}
+                            onClick={() =>
+                              alert("Simulated: Import habits from .sql backup")
+                            }
                             className="w-full flex items-center gap-3 px-3 py-2.5 text-xs font-medium rounded-xl hover:bg-[#1f1f1f] text-left transition"
                           >
                             <Upload className="w-4 h-4 text-[#FF8A00]" />
@@ -406,7 +453,10 @@ export default function Home() {
                         </p>
                       </div>
                     </div>
-                    <div className="flex-1" onClick={() => setIsDrawerOpen(false)} />
+                    <div
+                      className="flex-1"
+                      onClick={() => setIsDrawerOpen(false)}
+                    />
                   </div>
                 )}
 
@@ -443,8 +493,11 @@ export default function Home() {
                                 </div>
                                 <div className="text-[11px] text-[#8A8A8A] flex items-center gap-1.5 mt-0.5">
                                   <span
-                                    className={`w-1.5 h-1.5 rounded-full ${h.type === "recurring" ? "bg-[#22C55E]" : "bg-[#FF8A00]"
-                                      }`}
+                                    className={`w-1.5 h-1.5 rounded-full ${
+                                      h.type === "recurring"
+                                        ? "bg-[#22C55E]"
+                                        : "bg-[#FF8A00]"
+                                    }`}
                                   />
                                   <span>{h.recurrenceLabel}</span>
                                 </div>
@@ -508,7 +561,9 @@ export default function Home() {
                       {/* Mini Month Header */}
                       <div className="flex items-center justify-between px-1">
                         <span className="font-bold text-sm">November 2026</span>
-                        <div className="text-xs text-[#22C55E] font-medium">Today</div>
+                        <div className="text-xs text-[#22C55E] font-medium">
+                          Today
+                        </div>
                       </div>
 
                       {/* Calendar Grid */}
@@ -526,16 +581,19 @@ export default function Home() {
                           {[...Array(30)].map((_, i) => {
                             const day = i + 1;
                             const isCurrent = day === selectedDay;
-                            const hasCompletions = [2, 3, 5, 8, 12, 15, 20].includes(day);
+                            const hasCompletions = [
+                              2, 3, 5, 8, 12, 15, 20,
+                            ].includes(day);
 
                             return (
                               <button
                                 key={day}
                                 onClick={() => setSelectedDay(day)}
-                                className={`h-8 rounded-lg flex flex-col items-center justify-center relative transition ${isCurrent
-                                  ? "bg-[#22C55E] text-black font-bold"
-                                  : "hover:bg-[#262626] text-white"
-                                  }`}
+                                className={`h-8 rounded-lg flex flex-col items-center justify-center relative transition ${
+                                  isCurrent
+                                    ? "bg-[#22C55E] text-black font-bold"
+                                    : "hover:bg-[#262626] text-white"
+                                }`}
                               >
                                 <span>{day}</span>
                                 {hasCompletions && !isCurrent && (
@@ -549,10 +607,12 @@ export default function Home() {
 
                       {/* Day summary */}
                       <div className="p-3 bg-[#0D0D0D] border border-[#262626] rounded-xl text-xs space-y-1.5">
-                        <div className="font-semibold text-white">Day {selectedDay} Schedule</div>
+                        <div className="font-semibold text-white">
+                          Day {selectedDay} Schedule
+                        </div>
                         <p className="text-[#8A8A8A] text-[11px]">
-                          2 habits scheduled on this date. Filter by one-time or recurring to review
-                          consistency streaks.
+                          2 habits scheduled on this date. Filter by one-time or
+                          recurring to review consistency streaks.
                         </p>
                       </div>
                     </div>
@@ -612,8 +672,11 @@ export default function Home() {
                         </div>
 
                         <div className="p-2.5 rounded-xl bg-[#0D0D0D] border border-[#262626] text-[11px] text-[#8A8A8A]">
-                          Cycle interval: Every <span className="text-white font-bold">1</span> day at{" "}
-                          <span className="text-[#22C55E] font-bold">08:00 AM</span>
+                          Cycle interval: Every{" "}
+                          <span className="text-white font-bold">1</span> day at{" "}
+                          <span className="text-[#22C55E] font-bold">
+                            08:00 AM
+                          </span>
                         </div>
 
                         <button
@@ -639,8 +702,8 @@ export default function Home() {
                 Designed for ruthless discipline.
               </h2>
               <p className="text-base sm:text-lg text-[#8A8A8A] max-w-xl mx-auto">
-                Every detail is engineered to help you build habits without distractions,
-                accounts, or unnecessary complexities.
+                Every detail is engineered to help you build habits without
+                distractions, accounts, or unnecessary complexities.
               </p>
             </div>
 
@@ -651,10 +714,13 @@ export default function Home() {
                   <div className="w-12 h-12 rounded-2xl bg-[#141414] border border-[#262626] flex items-center justify-center mb-6 text-[#22C55E]">
                     <Zap className="w-6 h-6" />
                   </div>
-                  <h3 className="text-xl font-bold mb-2">Live Recurrence Resets</h3>
+                  <h3 className="text-xl font-bold mb-2">
+                    Live Recurrence Resets
+                  </h3>
                   <p className="text-sm text-[#8A8A8A] leading-relaxed">
-                    Recurring habits automatically transition to completed with a live countdown.
-                    Once the cycle finishes, they reset back to active and notify you immediately.
+                    Recurring habits automatically transition to completed with
+                    a live countdown. Once the cycle finishes, they reset back
+                    to active and notify you immediately.
                   </p>
                 </div>
                 <div className="mt-8 pt-4 border-t border-[#262626] text-xs font-mono text-[#22C55E] flex items-center gap-1.5">
@@ -669,10 +735,13 @@ export default function Home() {
                   <div className="w-12 h-12 rounded-2xl bg-[#141414] border border-[#262626] flex items-center justify-center mb-6 text-[#FF8A00]">
                     <ShieldCheck className="w-6 h-6" />
                   </div>
-                  <h3 className="text-xl font-bold mb-2">Zero Network Permissions</h3>
+                  <h3 className="text-xl font-bold mb-2">
+                    Zero Network Permissions
+                  </h3>
                   <p className="text-sm text-[#8A8A8A] leading-relaxed">
-                    No tracking scripts, no cloud logins, and no internet access declared in the
-                    Android manifest. Your personal routines stay strictly on your phone.
+                    No tracking scripts, no cloud logins, and no internet access
+                    declared in the Android manifest. Your personal routines
+                    stay strictly on your phone.
                   </p>
                 </div>
                 <div className="mt-8 pt-4 border-t border-[#262626] text-xs font-mono text-[#FF8A00] flex items-center gap-1.5">
@@ -687,10 +756,13 @@ export default function Home() {
                   <div className="w-12 h-12 rounded-2xl bg-[#141414] border border-[#262626] flex items-center justify-center mb-6 text-white">
                     <Database className="w-6 h-6" />
                   </div>
-                  <h3 className="text-xl font-bold mb-2">Native SQL Dump & Restore</h3>
+                  <h3 className="text-xl font-bold mb-2">
+                    Native SQL Dump & Restore
+                  </h3>
                   <p className="text-sm text-[#8A8A8A] leading-relaxed">
-                    Export complete SQLite database dumps anytime. Import or merge your backups across
-                    devices without relying on any subscription cloud locker.
+                    Export complete SQLite database dumps anytime. Import or
+                    merge your backups across devices without relying on any
+                    subscription cloud locker.
                   </p>
                 </div>
                 <div className="mt-8 pt-4 border-t border-[#262626] text-xs font-mono text-white flex items-center gap-1.5">
@@ -720,8 +792,8 @@ export default function Home() {
                 Ready to build distraction-free habits?
               </h2>
               <p className="text-sm sm:text-base text-[#8A8A8A] max-w-xl mb-8">
-                Download the latest APK release from GitHub. No account setup, zero data collection,
-                and completely open source.
+                Download the latest APK release from GitHub. No account setup,
+                zero data collection, and completely open source.
               </p>
 
               <div className="flex flex-wrap items-center justify-center gap-4">

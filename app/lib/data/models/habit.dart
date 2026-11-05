@@ -44,8 +44,9 @@ class Habit {
     DateTime? anchorAt,
     DateTime? now,
   }) {
-    final created = now ?? DateTime.now();
-    final anchor = anchorAt ?? created;
+    // Schedules never carry seconds: everything is anchored to a whole minute.
+    final created = _minuteOf(now ?? DateTime.now());
+    final anchor = _minuteOf(anchorAt ?? created);
     return Habit(
       id: const Uuid().v4(),
       name: name.trim(),
@@ -53,7 +54,9 @@ class Habit {
       recurrence: recurrence,
       notify: notify,
       isDone: false,
-      oneTimeAt: recurrence != null ? null : oneTimeAt,
+      oneTimeAt: recurrence != null || oneTimeAt == null
+          ? null
+          : _minuteOf(oneTimeAt),
       anchorAt: anchor,
       nextDueAt: recurrence?.nextAfter(anchor, created),
       completedAt: null,
@@ -64,25 +67,39 @@ class Habit {
 
   factory Habit.fromMap(Map<String, Object?> map) {
     final unit = map[HabitColumns.recurUnit] as String?;
-    final interval = map[HabitColumns.recurInterval] as int?;
-    final recurring = (map[HabitColumns.isRecurring] as int) == 1;
+    final rawInterval = map[HabitColumns.recurInterval] is int
+        ? map[HabitColumns.recurInterval] as int
+        : null;
+    // A zero or negative interval would trip the Recurrence assert, so such a
+    // row is read as a plain one-time habit instead of failing the whole load.
+    final interval = rawInterval != null && rawInterval > 0
+        ? rawInterval
+        : null;
+    final recurring = _flag(map[HabitColumns.isRecurring]);
+    final createdAt = _toDate(map[HabitColumns.createdAt]);
+    final updatedAt = _toDate(map[HabitColumns.updatedAt]);
     return Habit(
-      id: map[HabitColumns.id] as String,
-      name: map[HabitColumns.name] as String,
+      id: map[HabitColumns.id] as String? ?? '',
+      name: (map[HabitColumns.name] as String?)?.trim() ?? 'Untitled habit',
       labelId: map[HabitColumns.labelId] as String?,
       recurrence: recurring && unit != null && interval != null
           ? Recurrence(unit: RecurUnit.fromName(unit), interval: interval)
           : null,
-      notify: (map[HabitColumns.notify] as int) == 1,
-      isDone: (map[HabitColumns.isDone] as int) == 1,
+      notify: _flag(map[HabitColumns.notify]),
+      isDone: _flag(map[HabitColumns.isDone]),
       oneTimeAt: _toDate(map[HabitColumns.oneTimeAt]),
-      anchorAt: _toDate(map[HabitColumns.anchorAt])!,
+      anchorAt:
+          _toDate(map[HabitColumns.anchorAt]) ?? createdAt ?? DateTime.now(),
       nextDueAt: _toDate(map[HabitColumns.nextDueAt]),
       completedAt: _toDate(map[HabitColumns.completedAt]),
-      createdAt: _toDate(map[HabitColumns.createdAt])!,
-      updatedAt: _toDate(map[HabitColumns.updatedAt])!,
+      createdAt: createdAt ?? updatedAt ?? DateTime.now(),
+      updatedAt: updatedAt ?? createdAt ?? DateTime.now(),
     );
   }
+
+  /// Tolerant boolean read: rows written by older builds or an imported file
+  /// can carry 0/1, true/false or NULL.
+  static bool _flag(Object? value) => value == 1 || value == true;
 
   final String id;
   final String name;
@@ -150,6 +167,16 @@ class Habit {
 
   static DateTime? _toDate(Object? value) {
     if (value == null) return null;
-    return DateTime.fromMillisecondsSinceEpoch(value as int);
+    if (value is int) return DateTime.fromMillisecondsSinceEpoch(value);
+    if (value is num) {
+      return DateTime.fromMillisecondsSinceEpoch(value.toInt());
+    }
+    // Imported files can carry an epoch as text; anything unparseable reads as
+    // "not set" rather than throwing the row away.
+    final parsed = int.tryParse(value.toString());
+    return parsed == null ? null : DateTime.fromMillisecondsSinceEpoch(parsed);
   }
+
+  static DateTime _minuteOf(DateTime dt) =>
+      DateTime(dt.year, dt.month, dt.day, dt.hour, dt.minute);
 }

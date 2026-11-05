@@ -15,11 +15,7 @@ class HabitLabel {
     required this.createdAt,
   });
 
-  factory HabitLabel.create({
-    required String name,
-    int? color,
-    DateTime? now,
-  }) {
+  factory HabitLabel.create({required String name, int? color, DateTime? now}) {
     final created = now ?? DateTime.now();
     return HabitLabel(
       id: const Uuid().v4(),
@@ -45,11 +41,7 @@ class HabitLabel {
   final int? color;
   final DateTime createdAt;
 
-  HabitLabel copyWith({
-    String? name,
-    int? color,
-    DateTime? createdAt,
-  }) {
+  HabitLabel copyWith({String? name, int? color, DateTime? createdAt}) {
     return HabitLabel(
       id: id,
       name: name ?? this.name,
@@ -67,4 +59,3 @@ class HabitLabel {
     };
   }
 }
-

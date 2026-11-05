@@ -3,6 +3,7 @@ import 'package:habit_me/data/models/completion.dart';
 import 'package:habit_me/data/models/habit.dart';
 import 'package:habit_me/data/models/label.dart';
 
+/// Rows read from a backup file, already type-checked and safe to write.
 class ParsedBackup {
   const ParsedBackup({
     required this.habits,
@@ -13,171 +14,287 @@ class ParsedBackup {
   final List<Map<String, Object?>> habits;
   final List<Map<String, Object?>> completions;
   final List<Map<String, Object?>> labels;
+
+  int get labelCount => labels.length;
+  int get rowCount => labels.length + habits.length + completions.length;
+
+  bool get isEmpty => rowCount == 0;
 }
 
+/// Turns the label/habit/completion tables into a portable `.sql` dump and back.
+///
+/// Nothing is ever executed as SQL: [decode] reads the statements positionally,
+/// rejects any table or column outside [_schemas] and any value that cannot be
+/// coerced to the declared column type, so a corrupt or hand-edited file fails
+/// with a usable message instead of damaging the database.
 abstract final class SqlCodec {
-  static const _labelColumns = [
-    LabelColumns.id,
-    LabelColumns.name,
-    LabelColumns.color,
-    LabelColumns.createdAt,
-  ];
+  /// Every table a backup may contain, with its exact column layout.
+  static const Map<String, List<_Column>> _schemas = {
+    AppConstants.tableLabels: [
+      _Column(LabelColumns.id, isText: true, required: true),
+      _Column(LabelColumns.name, isText: true, required: true),
+      _Column(LabelColumns.color),
+      _Column(LabelColumns.createdAt, required: true),
+    ],
+    AppConstants.tableHabits: [
+      _Column(HabitColumns.id, isText: true, required: true),
+      _Column(HabitColumns.name, isText: true, required: true),
+      _Column(HabitColumns.labelId, isText: true),
+      _Column(HabitColumns.isRecurring, required: true),
+      _Column(HabitColumns.recurUnit, isText: true),
+      _Column(HabitColumns.recurInterval),
+      _Column(HabitColumns.notify, required: true),
+      _Column(HabitColumns.isDone, required: true),
+      _Column(HabitColumns.oneTimeAt),
+      _Column(HabitColumns.anchorAt, required: true),
+      _Column(HabitColumns.nextDueAt),
+      _Column(HabitColumns.completedAt),
+      _Column(HabitColumns.createdAt, required: true),
+      _Column(HabitColumns.updatedAt, required: true),
+    ],
+    AppConstants.tableCompletions: [
+      _Column(CompletionColumns.habitId, isText: true, required: true),
+      _Column(CompletionColumns.completedAt, required: true),
+    ],
+  };
 
-  static const _habitColumns = [
-    HabitColumns.id,
-    HabitColumns.name,
-    HabitColumns.labelId,
-    HabitColumns.isRecurring,
-    HabitColumns.recurUnit,
-    HabitColumns.recurInterval,
-    HabitColumns.notify,
-    HabitColumns.isDone,
-    HabitColumns.oneTimeAt,
-    HabitColumns.anchorAt,
-    HabitColumns.nextDueAt,
-    HabitColumns.completedAt,
-    HabitColumns.createdAt,
-    HabitColumns.updatedAt,
-  ];
+  static final List<String> _tableNames = _schemas.keys.toList();
 
-  static const _completionColumns = [
-    CompletionColumns.habitId,
-    CompletionColumns.completedAt,
-  ];
+  static final RegExp _insert = RegExp(
+    'INSERT(?:\\s+OR\\s+(?:REPLACE|IGNORE|FAIL|ABORT|ROLLBACK))?'
+    '\\s+INTO\\s+"?([A-Za-z_]+)"?\\s*\\(([^)]*)\\)\\s*VALUES\\s*\\(',
+    caseSensitive: false,
+  );
 
-  static String encode(
-    List<Habit> habits,
-    List<Completion> completions, [
-    List<HabitLabel> labels = const [],
-  ]) {
+  /// Builds the dump. Rows are written in the order the tables depend on
+  /// (labels, then habits, then completions) so the file can also be applied by
+  /// an external SQLite tool without tripping the foreign key.
+  static String encode({
+    required List<Map<String, Object?>> labels,
+    required List<Map<String, Object?>> habits,
+    required List<Map<String, Object?>> completions,
+  }) {
     final buffer = StringBuffer()
       ..writeln(AppConstants.backupMarker)
       ..writeln('-- exported ${DateTime.now().toIso8601String()}')
+      ..writeln(
+        '-- ${labels.length} labels, ${habits.length} habits, '
+        '${completions.length} completions',
+      )
       ..writeln('BEGIN TRANSACTION;');
 
-    for (final label in labels) {
-      final map = label.toMap();
-      buffer.writeln(_statement(AppConstants.tableLabels, _labelColumns, map));
-    }
-    for (final habit in habits) {
-      final map = habit.toMap();
-      buffer.writeln(_statement(AppConstants.tableHabits, _habitColumns, map));
-    }
-    for (final completion in completions) {
-      final map = completion.toMap();
-      buffer.writeln(
-        _statement(AppConstants.tableCompletions, _completionColumns, map),
-      );
-    }
+    _writeTable(buffer, AppConstants.tableLabels, labels);
+    _writeTable(buffer, AppConstants.tableHabits, habits);
+    _writeTable(buffer, AppConstants.tableCompletions, completions);
 
     buffer.writeln('COMMIT;');
     return buffer.toString();
   }
 
-  static String _statement(
+  static void _writeTable(
+    StringBuffer buffer,
     String table,
-    List<String> columns,
-    Map<String, Object?> map,
+    List<Map<String, Object?>> rows,
   ) {
-    final values = columns.map((c) => _literal(map[c])).join(', ');
-    return 'INSERT INTO $table (${columns.join(', ')}) VALUES ($values);';
+    final columns = _schemas[table]!;
+    final columnList = columns.map((c) => c.name).join(', ');
+    for (final row in rows) {
+      final values = <String>[];
+      for (var i = 0; i < columns.length; i++) {
+        final column = columns[i];
+        // Look the value up by name and tolerate a row that carries extras.
+        values.add(_literal(row[column.name], column));
+      }
+      buffer.writeln(
+        'INSERT INTO $table ($columnList) VALUES (${values.join(', ')});',
+      );
+    }
   }
 
-  static String _literal(Object? value) {
+  static String _literal(Object? value, _Column column) {
     if (value == null) return 'NULL';
-    if (value is num) return value.toString();
-    final escaped = value.toString().replaceAll("'", "''");
-    return "'$escaped'";
+    if (column.isText) return "'${value.toString().replaceAll("'", "''")}'";
+    if (value is bool) return value ? '1' : '0';
+    if (value is int) return '$value';
+    if (value is num) return value.toInt().toString();
+    final parsed = int.tryParse(value.toString());
+    if (parsed != null) return '$parsed';
+    // Never drop a value because of an unexpected type: keep it quoted and let
+    // decode() decide whether it fits the column.
+    return "'${value.toString().replaceAll("'", "''")}'";
   }
 
   static ParsedBackup decode(String text) {
-    final cleaned = text.startsWith('\uFEFF') ? text.substring(1) : text;
-    if (!cleaned.trimLeft().startsWith(AppConstants.backupMarker)) {
-      throw const FormatException('Not a HabitMe backup file');
+    final source = _normalizeLineEndings(text);
+
+    if (!_startsWithMarker(source)) {
+      throw FormatException(
+        'This file is not a HabitMe backup - it must start with '
+        '"${AppConstants.backupMarker}".',
+      );
     }
 
-    final labels = <Map<String, Object?>>[];
-    final habits = <Map<String, Object?>>[];
-    final completions = <Map<String, Object?>>[];
-    final statement = RegExp(
-      r'INSERT(?:\s+OR\s+REPLACE)?\s+INTO\s+(habits|completions|labels)\s*\(([^)]*)\)\s*VALUES\s*\(',
-      caseSensitive: false,
-    );
+    final rows = <String, List<Map<String, Object?>>>{
+      for (final table in _tableNames) table: <Map<String, Object?>>[],
+    };
 
     var pos = 0;
-    while (pos < cleaned.length) {
-      pos = _skipSpace(cleaned, pos);
-      if (pos >= cleaned.length) break;
+    while (true) {
+      pos = _skipSpace(source, pos);
+      if (pos >= source.length) break;
 
-      if (cleaned.startsWith('--', pos)) {
-        final end = cleaned.indexOf('\n', pos);
-        pos = end == -1 ? cleaned.length : end + 1;
-        continue;
-      }
-
-      final upper = cleaned
-          .substring(pos, pos + 20 > cleaned.length ? cleaned.length : pos + 20)
-          .toUpperCase();
-      if (upper.startsWith('BEGIN TRANSACTION;')) {
-        pos += 'BEGIN TRANSACTION;'.length;
-        continue;
-      }
-      if (upper.startsWith('BEGIN;')) {
-        pos += 'BEGIN;'.length;
-        continue;
-      }
-      if (upper.startsWith('COMMIT;')) {
-        pos += 'COMMIT;'.length;
+      // Comment line: skip to the end of the line.
+      if (source.startsWith('--', pos)) {
+        final end = source.indexOf('\n', pos);
+        pos = end == -1 ? source.length : end + 1;
         continue;
       }
 
-      final match = statement.matchAsPrefix(cleaned, pos);
+      // Transaction wrappers and pragmas carry no data: step over them.
+      if (_startsWithAnyOf(source, pos, const [
+        'BEGIN',
+        'COMMIT',
+        'END',
+        'PRAGMA',
+      ])) {
+        final end = source.indexOf(';', pos);
+        pos = end == -1 ? source.length : end + 1;
+        continue;
+      }
+
+      final match = _insert.matchAsPrefix(source, pos);
       if (match == null) {
-        throw const FormatException('Unsupported statement in backup file');
+        throw FormatException(
+          'Unsupported statement on line ${_lineAt(source, pos)}: '
+          '${_snippet(source, pos)}',
+        );
       }
 
       final table = match.group(1)!.toLowerCase();
-      final columns = match.group(2)!.split(',').map((c) => c.trim()).toList();
-      final List<String> allowed;
-      if (table == AppConstants.tableLabels) {
-        allowed = _labelColumns;
-      } else if (table == AppConstants.tableHabits) {
-        allowed = _habitColumns;
-      } else {
-        allowed = _completionColumns;
+      final schema = _schemas[table];
+      if (schema == null) {
+        throw FormatException(
+          'Line ${_lineAt(source, pos)}: table "$table" is not part of a '
+          'HabitMe backup.',
+        );
       }
 
-      if (columns.any((c) => !allowed.contains(c))) {
-        throw const FormatException('Unknown column in backup file');
+      final columns = match
+          .group(2)!
+          .split(',')
+          .map((column) => column.trim().replaceAll('"', ''))
+          .where((column) => column.isNotEmpty)
+          .toList();
+
+      for (final column in columns) {
+        if (!schema.any((c) => c.name == column)) {
+          throw FormatException(
+            'Line ${_lineAt(source, pos)}: unknown column "$column" for table '
+            '"$table".',
+          );
+        }
       }
 
-      final reader = _ValueReader(cleaned, match.end);
-      final values = reader.readValues();
-      if (values.length != columns.length) {
-        throw const FormatException('Column and value count mismatch');
-      }
-      pos = reader.position;
+      final reader = _ValueReader(source, match.end);
+      while (true) {
+        final values = reader.readTuple();
+        if (values.length != columns.length) {
+          throw FormatException(
+            'Line ${_lineAt(source, pos)}: ${values.length} values do not match '
+            'the ${columns.length} columns of "$table".',
+          );
+        }
+        pos = reader.position;
 
-      final row = <String, Object?>{
-        for (var i = 0; i < columns.length; i++) columns[i]: values[i],
-      };
-      if (table == AppConstants.tableLabels) {
-        HabitLabel.fromMap(row);
-        labels.add(row);
-      } else if (table == AppConstants.tableHabits) {
-        Habit.fromMap(row);
-        habits.add(row);
-      } else {
-        Completion.fromMap(row);
-        completions.add(row);
+        final row = <String, Object?>{};
+        for (var i = 0; i < columns.length; i++) {
+          row[columns[i]] = values[i];
+        }
+        rows[table]!.add(_validate(table, row));
+
+        final next = _skipSpace(source, pos);
+        if (next < source.length && source[next] == ',') {
+          // Another value tuple of the same statement: VALUES (..), (..);
+          final open = _skipSpace(source, next + 1);
+          if (open >= source.length || source[open] != '(') {
+            throw FormatException(
+              'Line ${_lineAt(source, pos)}: malformed value list.',
+            );
+          }
+          reader.reset(open + 1);
+          continue;
+        }
+
+        pos = _expectTerminator(source, next, pos);
+        break;
       }
     }
 
-    return ParsedBackup(
-      labels: labels,
-      habits: habits,
-      completions: completions,
+    final backup = ParsedBackup(
+      labels: rows[AppConstants.tableLabels]!,
+      habits: rows[AppConstants.tableHabits]!,
+      completions: rows[AppConstants.tableCompletions]!,
     );
+
+    if (backup.isEmpty) {
+      throw const FormatException(
+        'The backup file contains no labels, habits or completions.',
+      );
+    }
+    return backup;
+  }
+
+  /// Coerces the values to the column types and lets the models double-check
+  /// the row, so a bad record is reported instead of breaking a later write.
+  static Map<String, Object?> _validate(
+    String table,
+    Map<String, Object?> raw,
+  ) {
+    final schema = _schemas[table]!;
+    final row = <String, Object?>{};
+    for (final column in schema) {
+      row[column.name] = column.coerce(raw[column.name], table);
+    }
+
+    try {
+      switch (table) {
+        case AppConstants.tableLabels:
+          HabitLabel.fromMap(row);
+        case AppConstants.tableHabits:
+          Habit.fromMap(row);
+        case AppConstants.tableCompletions:
+          Completion.fromMap(row);
+      }
+    } on Object catch (error) {
+      throw FormatException(
+        'Invalid ${_singular(table)} in the backup: $error',
+      );
+    }
+    return row;
+  }
+
+  static String _singular(String table) => switch (table) {
+    AppConstants.tableLabels => 'label',
+    AppConstants.tableHabits => 'habit',
+    _ => 'completion',
+  };
+
+  static String _normalizeLineEndings(String text) {
+    final withoutBom = text.startsWith('\uFEFF') ? text.substring(1) : text;
+    return withoutBom.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
+  }
+
+  static bool _startsWithMarker(String source) {
+    final firstLine = source.trimLeft();
+    return firstLine.startsWith(AppConstants.backupMarker) ||
+        firstLine.startsWith('-- habit-tracker-backup');
+  }
+
+  static bool _startsWithAnyOf(String source, int pos, List<String> prefixes) {
+    final head = source
+        .substring(pos, pos + 16 > source.length ? source.length : pos + 16)
+        .toUpperCase();
+    return prefixes.any(head.startsWith);
   }
 
   static int _skipSpace(String text, int pos) {
@@ -186,37 +303,107 @@ abstract final class SqlCodec {
     }
     return pos;
   }
+
+  static int _expectTerminator(String source, int next, int pos) {
+    if (next < source.length && source[next] == ';') return next + 1;
+    // Some editors drop the final semicolon; the statement is still complete.
+    if (next >= source.length) return source.length;
+    throw FormatException(
+      'Line ${_lineAt(source, pos)}: statement is not terminated with ";".',
+    );
+  }
+
+  static int _lineAt(String source, int pos) {
+    var line = 1;
+    for (var i = 0; i < pos && i < source.length; i++) {
+      if (source[i] == '\n') line++;
+    }
+    return line;
+  }
+
+  static String _snippet(String source, int pos) {
+    final end = source.indexOf('\n', pos);
+    final stop = end == -1 || end > pos + 60 ? pos + 60 : end;
+    return '${source.substring(pos, stop > pos ? stop : pos)}...';
+  }
 }
 
+/// One column of a whitelisted table.
+class _Column {
+  const _Column(this.name, {this.isText = false, this.required = false});
+
+  final String name;
+  final bool isText;
+  final bool required;
+
+  /// Normalises a parsed value to what the table actually stores, so the later
+  /// database write cannot fail on a type that only looks right.
+  Object? coerce(Object? value, String table) {
+    if (value == null) {
+      if (required) {
+        throw FormatException(
+          'The backup has a NULL in the required column "$name" of "$table".',
+        );
+      }
+      return null;
+    }
+
+    if (isText) {
+      final text = value.toString();
+      if (text.isEmpty && required) {
+        throw FormatException('The backup has an empty "$name" in "$table".');
+      }
+      return text;
+    }
+
+    if (value is int) return value;
+    if (value is bool) return value ? 1 : 0;
+    if (value is num) return value.toInt();
+    final parsed = int.tryParse(value.toString().trim());
+    if (parsed == null) {
+      throw FormatException(
+        'The value "$value" for "$name" in "$table" is not a number.',
+      );
+    }
+    return parsed;
+  }
+}
+
+/// Reads the `(...)` value list of an INSERT statement.
 class _ValueReader {
   _ValueReader(this._text, this.position);
 
   final String _text;
   int position;
 
-  List<Object?> readValues() {
+  void reset(int next) => position = next;
+
+  List<Object?> readTuple() {
     final values = <Object?>[];
     while (true) {
       values.add(_readValue());
       _skipWhitespace();
       if (position >= _text.length) {
-        throw const FormatException('Unexpected end of backup file');
+        throw const FormatException(
+          'The backup file ends inside a value list.',
+        );
       }
       final char = _text[position];
       position++;
       if (char == ',') continue;
       if (char == ')') break;
-      throw const FormatException('Malformed values in backup file');
+      throw FormatException(
+        'Unexpected "$char" where a value was expected '
+        '(line ${SqlCodec._lineAt(_text, position)}).',
+      );
     }
-    _skipWhitespace();
-    if (position < _text.length && _text[position] == ';') position++;
     return values;
   }
 
   Object? _readValue() {
     _skipWhitespace();
     if (position >= _text.length) {
-      throw const FormatException('Unexpected end of backup file');
+      throw const FormatException('The backup file ends inside a value list.');
     }
     if (_text[position] == "'") return _readString();
 
@@ -230,7 +417,10 @@ class _ValueReader {
     if (token.toUpperCase() == 'NULL') return null;
     final number = int.tryParse(token);
     if (number == null) {
-      throw const FormatException('Invalid value in backup file');
+      throw FormatException(
+        'Invalid value "${token.isEmpty ? '<empty>' : token}" at line '
+        '${SqlCodec._lineAt(_text, start)}.',
+      );
     }
     return number;
   }
@@ -252,7 +442,9 @@ class _ValueReader {
       buffer.write(char);
       position++;
     }
-    throw const FormatException('Unterminated string in backup file');
+    throw const FormatException(
+      'An unfinished text value was found in the backup.',
+    );
   }
 
   void _skipWhitespace() {

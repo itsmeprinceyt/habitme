@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
@@ -15,9 +16,6 @@ class HabitScheduler {
   final NotificationService _notifications;
 
   Future<List<Habit>> reconcile(DateTime now) async {
-    await _notifications.init();
-    await _notifications.syncTimezone();
-
     final habits = await _repo.getAll();
     final result = <Habit>[];
 
@@ -40,7 +38,10 @@ class HabitScheduler {
       }
     }
 
-    await sync(result, now);
+    // Reminders are re-armed in the background. `sync` logs every failure
+    // itself, and the list must never sit in a loading state - or show an
+    // error - because a platform channel was slow or refused the schedule.
+    unawaited(sync(result, now));
 
     return result;
   }
@@ -74,7 +75,10 @@ class HabitScheduler {
         ? 0
         : min(perHabitCap, max(3, globalCap ~/ recurringCount));
 
-    final entries = <ScheduledReminder>[];
+    // One-time reminders are single-shot and can't be regenerated, so they get
+    // priority over recurring reminders when the global cap is hit.
+    final oneTime = <ScheduledReminder>[];
+    final recurring = <ScheduledReminder>[];
 
     for (final habit in habits) {
       if (!habit.notify) continue;
@@ -83,8 +87,10 @@ class HabitScheduler {
 
       if (recurrence != null) {
         for (final at in recurrence.upcoming(habit.anchorAt, now, perHabit)) {
-          entries.add(
+          recurring.add(
             ScheduledReminder(
+              key: _key(habit, at),
+              habitId: habit.id,
               title: habit.name,
               body: 'Time to do it · ${recurrence.label}',
               at: at,
@@ -92,18 +98,39 @@ class HabitScheduler {
           );
         }
       } else {
-        final at = habit.oneTimeAt;
+        final scheduled = habit.oneTimeAt == null
+            ? null
+            : _toMinute(habit.oneTimeAt!);
 
-        if (!habit.isDone && at != null && at.isAfter(now)) {
-          entries.add(
-            ScheduledReminder(title: habit.name, body: 'Reminder', at: at),
+        if (!habit.isDone && scheduled != null && scheduled.isAfter(now)) {
+          oneTime.add(
+            ScheduledReminder(
+              key: _key(habit, scheduled),
+              habitId: habit.id,
+              title: habit.name,
+              body: 'Reminder',
+              at: scheduled,
+            ),
           );
         }
       }
     }
 
-    entries.sort((a, b) => a.at.compareTo(b.at));
+    int byTime(ScheduledReminder a, ScheduledReminder b) =>
+        a.at.compareTo(b.at);
+    oneTime.sort(byTime);
+    recurring.sort(byTime);
 
-    return entries.take(globalCap).toList();
+    return [...oneTime, ...recurring].take(globalCap).toList();
   }
+
+  /// A reminder's identity only changes when the habit or the exact minute it
+  /// targets changes, so an already armed reminder keeps its notification id
+  /// (and therefore its alarm) across re-syncs.
+  static String _key(Habit habit, DateTime at) =>
+      '${habit.id}@${at.millisecondsSinceEpoch}';
+
+  /// Drops seconds/milliseconds: schedules always land on a whole minute.
+  static DateTime _toMinute(DateTime dt) =>
+      DateTime(dt.year, dt.month, dt.day, dt.hour, dt.minute);
 }
