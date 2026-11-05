@@ -127,6 +127,12 @@ class _HabitTileState extends State<HabitTile> {
     final strike = done && habit.isOneTime;
     final nextTarget = _relevantNextDate;
 
+    // Label colour blended over the card so the sweep stays opaque: mixing an
+    // opaque and a translucent colour would dip towards transparency instead
+    // of fading into the card.
+    Color tint(double alpha) =>
+        Color.alphaBlend(themeColor.withValues(alpha: alpha), AppColors.card);
+
     return Dismissible(
       key: ValueKey('dismiss_${habit.id}'),
       direction: DismissDirection.endToStart,
@@ -152,14 +158,17 @@ class _HabitTileState extends State<HabitTile> {
             decoration: BoxDecoration(
               gradient: label?.color != null
                   ? LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
+                      // Left to right sweep: the label colour holds across
+                      // most of the card, then fades out softly near the edge.
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
                       colors: [
-                        themeColor.withValues(alpha: 0.12),
-                        AppColors.card,
+                        tint(0.16),
+                        tint(0.16),
+                        tint(0.06),
                         AppColors.card,
                       ],
-                      stops: const [0.0, 0.45, 1.0],
+                      stops: const [0.0, 0.6, 0.84, 1.0],
                     )
                   : null,
               color: label?.color != null ? null : AppColors.card,
