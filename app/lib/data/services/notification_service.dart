@@ -1,4 +1,3 @@
-import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest.dart' as tzdata;
@@ -126,7 +125,7 @@ class NotificationService {
         _channelName,
         importance: Importance.high,
         priority: Priority.high,
-        icon: '@mipmap/ic_launcher',
+        icon: '@drawable/ic_notification',
         actions: [
           AndroidNotificationAction(
             doneActionId,
@@ -152,13 +151,25 @@ class NotificationService {
 
     var id = 1;
     for (final reminder in reminders) {
+      // Skip anything already in the past — a bad entry must never abort the
+      // rest of the schedule.
+      if (!reminder.at.isAfter(DateTime.now())) {
+        id++;
+        continue;
+      }
       final mode = exact
           ? AndroidScheduleMode.exactAllowWhileIdle
           : AndroidScheduleMode.inexactAllowWhileIdle;
       try {
         await schedule(id, reminder, mode);
-      } on PlatformException {
-        await schedule(id, reminder, AndroidScheduleMode.inexactAllowWhileIdle);
+      } catch (_) {
+        try {
+          await schedule(
+            id,
+            reminder,
+            AndroidScheduleMode.inexactAllowWhileIdle,
+          );
+        } catch (_) {}
       }
       id++;
     }

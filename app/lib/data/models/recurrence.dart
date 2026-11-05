@@ -32,26 +32,30 @@ class Recurrence {
     return 'Every $interval ${unit.label.toLowerCase()}';
   }
 
+  /// Truncates to minute precision — schedules never carry seconds.
+  static DateTime minuteOf(DateTime dt) =>
+      DateTime(dt.year, dt.month, dt.day, dt.hour, dt.minute);
+
   DateTime occurrence(DateTime anchor, int index) {
+    final base = minuteOf(anchor);
     final steps = interval * index;
     switch (unit) {
       case RecurUnit.minutes:
-        return anchor.add(Duration(minutes: steps));
+        return base.add(Duration(minutes: steps));
       case RecurUnit.hours:
-        return anchor.add(Duration(hours: steps));
+        return base.add(Duration(hours: steps));
       case RecurUnit.days:
         return DateTime(
-          anchor.year,
-          anchor.month,
-          anchor.day + steps,
-          anchor.hour,
-          anchor.minute,
-          anchor.second,
+          base.year,
+          base.month,
+          base.day + steps,
+          base.hour,
+          base.minute,
         );
       case RecurUnit.months:
-        return _addMonths(anchor, steps);
+        return _addMonths(base, steps);
       case RecurUnit.years:
-        return _addMonths(anchor, steps * 12);
+        return _addMonths(base, steps * 12);
     }
   }
 
@@ -135,13 +139,6 @@ class Recurrence {
     final month = total % 12 + 1;
     final lastDay = DateTime(year, month + 1, 0).day;
     final day = min(anchor.day, lastDay);
-    return DateTime(
-      year,
-      month,
-      day,
-      anchor.hour,
-      anchor.minute,
-      anchor.second,
-    );
+    return DateTime(year, month, day, anchor.hour, anchor.minute);
   }
 }

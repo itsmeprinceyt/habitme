@@ -50,12 +50,15 @@ class _HabitTileState extends State<HabitTile> {
   }
 
   DateTime? get _relevantNextDate {
+    DateTime? minuteOf(DateTime? dt) => dt == null
+        ? null
+        : DateTime(dt.year, dt.month, dt.day, dt.hour, dt.minute);
     if (habit.isRecurring) {
-      return habit.nextDueAt;
+      return minuteOf(habit.nextDueAt);
     }
     // Hide next date for completed one-time habits
     if (habit.isDone) return null;
-    return habit.oneTimeAt;
+    return minuteOf(habit.oneTimeAt);
   }
 
   String get _summarySubtitle {

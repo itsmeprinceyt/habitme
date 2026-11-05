@@ -74,7 +74,10 @@ class HabitScheduler {
         ? 0
         : min(perHabitCap, max(3, globalCap ~/ recurringCount));
 
-    final entries = <ScheduledReminder>[];
+    // One-time reminders are single-shot and can't be regenerated, so they get
+    // priority over recurring reminders when the global cap is hit.
+    final oneTime = <ScheduledReminder>[];
+    final recurring = <ScheduledReminder>[];
 
     for (final habit in habits) {
       if (!habit.notify) continue;
@@ -83,7 +86,7 @@ class HabitScheduler {
 
       if (recurrence != null) {
         for (final at in recurrence.upcoming(habit.anchorAt, now, perHabit)) {
-          entries.add(
+          recurring.add(
             ScheduledReminder(
               habitId: habit.id,
               title: habit.name,
@@ -96,20 +99,30 @@ class HabitScheduler {
         final at = habit.oneTimeAt;
 
         if (!habit.isDone && at != null && at.isAfter(now)) {
-          entries.add(
+          final minute = DateTime(
+            at.year,
+            at.month,
+            at.day,
+            at.hour,
+            at.minute,
+          );
+          oneTime.add(
             ScheduledReminder(
               habitId: habit.id,
               title: habit.name,
               body: 'Reminder',
-              at: at,
+              at: minute,
             ),
           );
         }
       }
     }
 
-    entries.sort((a, b) => a.at.compareTo(b.at));
+    int byTime(ScheduledReminder a, ScheduledReminder b) =>
+        a.at.compareTo(b.at);
+    oneTime.sort(byTime);
+    recurring.sort(byTime);
 
-    return entries.take(globalCap).toList();
+    return [...oneTime, ...recurring].take(globalCap).toList();
   }
 }

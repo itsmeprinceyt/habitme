@@ -40,6 +40,9 @@ class _HabitFormSheetState extends ConsumerState<HabitFormSheet> {
 
   bool get _isEditing => widget.habit != null;
 
+  static DateTime _minuteOf(DateTime dt) =>
+      DateTime(dt.year, dt.month, dt.day, dt.hour, dt.minute);
+
   @override
   void initState() {
     super.initState();
@@ -51,9 +54,10 @@ class _HabitFormSheetState extends ConsumerState<HabitFormSheet> {
     _recurrence =
         habit?.recurrence ??
         const Recurrence(unit: RecurUnit.days, interval: 1);
-    _oneTimeAt =
-        habit?.oneTimeAt ?? DateTime.now().add(const Duration(hours: 1));
-    _recurringAt = habit?.anchorAt ?? DateTime.now();
+    _oneTimeAt = _minuteOf(
+      habit?.oneTimeAt ?? DateTime.now().add(const Duration(hours: 1)),
+    );
+    _recurringAt = _minuteOf(habit?.anchorAt ?? DateTime.now());
   }
 
   @override
@@ -188,10 +192,12 @@ class _HabitFormSheetState extends ConsumerState<HabitFormSheet> {
 
     final name = _nameController.text.trim();
     final now = DateTime.now();
+    final oneTimeAt = _minuteOf(_oneTimeAt);
+    final recurringAt = _minuteOf(_recurringAt);
     final recurrence = _isRecurring ? _recurrence : null;
 
     if (_isRecurring && recurrence == null) return;
-    if (!_isRecurring && _notify && !_oneTimeAt.isAfter(now)) {
+    if (!_isRecurring && _notify && !oneTimeAt.isAfter(now)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please choose a reminder time in the future.')),
       );
@@ -208,8 +214,8 @@ class _HabitFormSheetState extends ConsumerState<HabitFormSheet> {
           labelId: _selectedLabelId,
           recurrence: recurrence,
           notify: _notify,
-          oneTimeAt: _isRecurring ? null : _oneTimeAt,
-          anchorAt: _isRecurring ? _recurringAt : now,
+          oneTimeAt: _isRecurring ? null : oneTimeAt,
+          anchorAt: _isRecurring ? recurringAt : now,
           now: now,
         );
         await ref.read(habitControllerProvider.notifier).add(habit);
@@ -220,11 +226,11 @@ class _HabitFormSheetState extends ConsumerState<HabitFormSheet> {
 
         final typeChanged = existing.isRecurring != _isRecurring;
         final anchorChanged =
-            _isRecurring && !existing.anchorAt.isAtSameMomentAs(_recurringAt);
+            _isRecurring && !existing.anchorAt.isAtSameMomentAs(recurringAt);
 
         final resetSchedule = typeChanged || recurrenceChanged || anchorChanged;
 
-        final anchor = _isRecurring ? _recurringAt : existing.anchorAt;
+        final anchor = _isRecurring ? recurringAt : existing.anchorAt;
         final nextDue = recurrence == null
             ? null
             : (resetSchedule || existing.nextDueAt == null
@@ -236,7 +242,7 @@ class _HabitFormSheetState extends ConsumerState<HabitFormSheet> {
           labelId: () => _selectedLabelId,
           recurrence: () => recurrence,
           notify: _notify,
-          oneTimeAt: () => _isRecurring ? null : _oneTimeAt,
+          oneTimeAt: () => _isRecurring ? null : oneTimeAt,
           anchorAt: anchor,
           nextDueAt: () => nextDue,
           isDone: typeChanged ? false : existing.isDone,
