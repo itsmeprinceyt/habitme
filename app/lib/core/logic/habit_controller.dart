@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:habit_me/core/logic/providers.dart';
 import 'package:habit_me/data/models/habit.dart';
@@ -11,8 +14,15 @@ class HabitController extends AsyncNotifier<List<Habit>> {
 
   @override
   Future<List<Habit>> build() async {
-    // Reconcile habits and schedule notifications on app startup.
-    return _scheduler.reconcile(DateTime.now());
+    // Reconcile habits on app startup. Notification re-arming runs in the
+    // background, so only a database failure can leave the list unloaded.
+    try {
+      return await _scheduler.reconcile(DateTime.now());
+    } catch (error, stackTrace) {
+      debugPrint('Habit load failed: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      rethrow;
+    }
   }
 
   // Called when the app returns to foreground.
@@ -95,10 +105,11 @@ class HabitController extends AsyncNotifier<List<Habit>> {
 
     if (habits == null) return;
 
-    await _scheduler.sync(
-      habits,
-      DateTime.now(),
-      askPermissions: askPermissions,
+    // Kept off the UI path: a slow or refused platform call must never leave a
+    // tile spinning after the habit itself is already saved. `sync` catches and
+    // logs everything it hits.
+    unawaited(
+      _scheduler.sync(habits, DateTime.now(), askPermissions: askPermissions),
     );
   }
 

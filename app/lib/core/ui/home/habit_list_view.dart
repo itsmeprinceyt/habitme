@@ -151,10 +151,44 @@ class _HabitListViewState extends ConsumerState<HabitListView> {
       loading: () => const Center(
         child: CircularProgressIndicator(color: AppColors.accent),
       ),
-      error: (error, _) => const Center(
-        child: Text(
-          'Could not load habits',
-          style: TextStyle(color: AppColors.orange),
+      error: (error, _) => Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.error_outline_rounded,
+                color: AppColors.orange,
+                size: 30,
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                'Could not load habits',
+                style: TextStyle(
+                  color: AppColors.orange,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 6),
+              // The real reason, so a device-only failure can be reported.
+              Text(
+                '$error',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: AppColors.muted,
+                  fontSize: 12,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 16),
+              FilledButton.icon(
+                onPressed: () => ref.invalidate(habitControllerProvider),
+                icon: const Icon(Icons.refresh_rounded, size: 18),
+                label: const Text('Retry'),
+              ),
+            ],
+          ),
         ),
       ),
       data: (all) {

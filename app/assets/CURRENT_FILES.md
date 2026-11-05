@@ -107,14 +107,15 @@ test/
 - [x] Expansion State Persistence: Remembers expanded/collapsed state of sections, label groups, and individual habit tiles across app re-opens via `ExpansionPreferences`.
 
 ### Step 4 – Notifications, Timezone & Custom Icon
-- [x] `flutter_local_notifications` 22.3.3 with `timezone` initialised from `data/latest_all.dart` so legacy Android ids (`Asia/Calcutta`, `Asia/Saigon`, `Asia/Dacca`) still resolve.
-- [x] Always-resolving zone lookup (`NotificationService._resolveLocation`): device id → bundled database → a fixed-offset `tz.Location` built from `DateTime.now().timeZoneOffset`, named with an id Java can parse (`Asia/Calcutta` or `+05:30`). `tz.local` is never left at UTC, which would offset every reminder by the device's distance from Greenwich.
+- [x] `flutter_local_notifications` 22.3.3 with `timezone` initialised from the compact `data/latest.dart`, plus a `_legacyZoneAliases` table so the old Android ids devices still report (`Asia/Calcutta`, `Asia/Saigon`, `Asia/Dacca`) resolve. `latest_all.dart` was tried and dropped - parsing the full tzdb on start-up is too heavy.
+- [x] Always-resolving zone lookup (`NotificationService.resolveZone`): device id → bundled database → alias table → a fixed-offset `tz.Location` built from `DateTime.now().timeZoneOffset`, named with an id Java can parse (`Asia/Calcutta` or `+05:30`). A resolved zone is re-labelled with the device's own id. `tz.local` is never left at UTC, which would offset every reminder by the device's distance from Greenwich.
+- [x] Timezone data is loaded lazily once, and `NotificationService.init()` is single-flight (shared attempt, failure not cached so the next call retries). `main()` starts it with `unawaited`, so no platform channel sits between launch and the first frame.
 - [x] All schedules truncated to whole minutes (`HabitScheduler._toMinute`, `Recurrence` second-dropping), so what is displayed, stored and armed is always the same minute.
 - [x] Stable FNV-1a `stableNotificationId(key)` per habit + target minute, plus a plan-signature diff in `replaceAll`: unchanged reminders keep their alarm, so a re-sync can never drop one that is about to fire.
 - [x] Exact and inexact alarm permission flows for Android 12+; when exact alarms are refused the schedule falls back to `inexactAllowWhileIdle` and the failure is logged with a retry. (`NotificationService.exactAlarmsBlocked` and `openExactAlarmSettings()` are implemented but not surfaced in the UI yet.)
 - [x] "Done" action on the notification itself — handled in-app (`onDoneAction`) and in a background isolate (`notification_action_handler.dart`), which writes straight to SQLite and re-syncs without Riverpod.
 - [x] Official app logo (`@mipmap/ic_launcher`, `drawable/ic_notification.xml`, `drawable-xxxhdpi/notification_logo.png`) used for notifications instead of the default Flutter icon.
-- [x] Reconciliation on app start and resume (`HabitScheduler.reconcile`), plus a foreground wake-up timer so a habit rolls over while the app stays open.
+- [x] Reconciliation on app start and resume (`HabitScheduler.reconcile`), plus a foreground wake-up timer so a habit rolls over while the app stays open. Re-arming reminders is fire-and-forget (`unawaited(sync(...))`) so the list can never hang or error on the notification pipeline.
 - [x] Rolling reminder window: 60 globally, `min(40, max(3, 60 / recurringCount))` per habit, with one-time reminders given priority when the cap is reached.
 - [x] Manifest: `POST_NOTIFICATIONS`, `SCHEDULE_EXACT_ALARM`, `USE_EXACT_ALARM`, `RECEIVE_BOOT_COMPLETED` and the plugin's action / scheduling / boot receivers.
 
@@ -157,10 +158,16 @@ test/
 - [x] Expanded tile detail shows the assigned label, the due / scheduled date with the live countdown (or the completed time, or "No specific target time set"), and a notifications-enabled note — inside a `GradientBorder` panel tinted with the label colour, with `Expanded` text so nothing is ellipsis-truncated.
 
 ### Step 10 – Verification & Regression Tests
-- [x] `test/scheduling_test.dart`: second-free schedule creation, `nextAfter` strictness (an occurrence exactly on `now` still rolls forward), stable notification ids, and the exact countdown strings.
+- [x] `test/scheduling_test.dart`: second-free schedule creation, `nextAfter` strictness (an occurrence exactly on `now` still rolls forward), stable notification ids, the exact countdown strings, and reading damaged stored rows (zero interval, NULL flags, missing/text timestamps) without throwing.
 - [x] `test/backup_codec_test.dart`: round-trip of every column, quote/emoji/semicolon escaping, CRLF + `INSERT OR REPLACE` + multi-row `VALUES` tolerance, and rejection of non-backup files, unknown tables/columns and required-column NULLs.
-- [x] `test/timezone_test.dart`: legacy Android ids resolve with the right offset, and a 20:00 reminder in `Asia/Calcutta` maps to the 14:30 UTC instant.
-- [x] `dart format lib test` and `flutter analyze` clean; `flutter test` → 18/18 passing.
+- [x] `test/timezone_test.dart`: legacy Android ids resolve through the alias table but keep the device spelling, unknown ids fall back to a fixed offset (never UTC), and a 20:00 reminder in `Asia/Calcutta` maps to the 14:30 UTC instant.
+- [x] `dart format lib test` and `flutter analyze` clean; `flutter test` → 24/24 passing.
+
+### Step 11 – Device Fix: "Could not load habits" / Ever-Loading List
+- [x] Removed every platform dependency from the list's critical path: `reconcile()` no longer awaits notification init/timezone sync, `_syncNotifications` and `main()`'s init are `unawaited`, and `init()` is single-flight so a failure can't wedge a cached Future.
+- [x] Dropped `data/latest_all.dart` (full tzdb parse on start-up - the regression's prime suspect) in favour of `data/latest.dart` + `_legacyZoneAliases`, keeping `Asia/Calcutta` working.
+- [x] Made reading habits fault-tolerant: `Habit.fromMap` clamps a non-positive `recur_interval` to a one-time habit, coerces `int`/`num`/text epochs and fills missing timestamps; `getAll()` skips an unreadable row instead of failing every row; `Recurrence._step` floors the interval at 1 so bad data can't divide by zero or spin `_nextIndex` forever.
+- [x] The failure is now visible instead of generic: the error panel prints the real reason and offers **Retry**, and `HabitController.build()` logs `Habit load failed:` with a stack trace.
 
 ---
 
@@ -178,3 +185,4 @@ test/
 | 8    | SQL Backup & Restore (Full Labels Sync)             | Complete |
 | 9    | State Persistence, Motion & Responsiveness          | Complete |
 | 10   | Regression Tests & Static Analysis                  | Complete |
+| 11   | Device Start-Up Fix (list loading & row resilience) | Complete |

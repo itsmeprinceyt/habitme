@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
@@ -15,9 +16,6 @@ class HabitScheduler {
   final NotificationService _notifications;
 
   Future<List<Habit>> reconcile(DateTime now) async {
-    await _notifications.init();
-    await _notifications.syncTimezone();
-
     final habits = await _repo.getAll();
     final result = <Habit>[];
 
@@ -40,7 +38,10 @@ class HabitScheduler {
       }
     }
 
-    await sync(result, now);
+    // Reminders are re-armed in the background. `sync` logs every failure
+    // itself, and the list must never sit in a loading state - or show an
+    // error - because a platform channel was slow or refused the schedule.
+    unawaited(sync(result, now));
 
     return result;
   }

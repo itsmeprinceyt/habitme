@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -18,8 +20,9 @@ Future<void> main() async {
   try {
     await ExpansionPreferences.instance.load();
   } catch (_) {}
-  try {
-    await NotificationService.instance.init();
-  } catch (_) {}
+  // Best-effort warm-up of the notification plugin. It must never delay the
+  // first frame: the scheduler calls it again, in the background, whenever it
+  // actually needs it.
+  unawaited(NotificationService.instance.init().catchError((_) {}));
   runApp(const ProviderScope(child: HabitApp()));
 }

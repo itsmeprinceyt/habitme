@@ -126,4 +126,65 @@ void main() {
       expect(DurationFormat.formatCountdown(Duration.zero), 'Due now');
     });
   });
+
+  group('stored habit rows', () {
+    test('a zero interval is read as one-time instead of throwing', () {
+      final habit = Habit.fromMap({
+        HabitColumns.id: 'h1',
+        HabitColumns.name: 'Legacy habit',
+        HabitColumns.isRecurring: 1,
+        HabitColumns.recurUnit: 'days',
+        HabitColumns.recurInterval: 0,
+        HabitColumns.notify: 0,
+        HabitColumns.isDone: 0,
+        HabitColumns.anchorAt: 1762300000000,
+        HabitColumns.createdAt: 1762300000000,
+        HabitColumns.updatedAt: 1762300000000,
+      });
+
+      expect(habit.recurrence, isNull);
+      expect(habit.isRecurring, isFalse);
+    });
+
+    test('NULL flags and missing timestamps never throw', () {
+      final habit = Habit.fromMap({
+        HabitColumns.id: 'h2',
+        HabitColumns.name: 'Half written row',
+        HabitColumns.isRecurring: null,
+        HabitColumns.notify: null,
+        HabitColumns.isDone: null,
+        HabitColumns.anchorAt: null,
+        HabitColumns.createdAt: null,
+        HabitColumns.updatedAt: null,
+      });
+
+      expect(habit.notify, isFalse);
+      expect(habit.isDone, isFalse);
+      expect(habit.anchorAt, isA<DateTime>());
+      expect(habit.createdAt, isA<DateTime>());
+    });
+
+    test('epochs stored as text are parsed, unparseable ones read as null', () {
+      final habit = Habit.fromMap({
+        HabitColumns.id: 'h3',
+        HabitColumns.name: 'Imported row',
+        HabitColumns.isRecurring: 1,
+        HabitColumns.recurUnit: 'minutes',
+        HabitColumns.recurInterval: 30,
+        HabitColumns.notify: 1,
+        HabitColumns.isDone: 0,
+        HabitColumns.anchorAt: '1762300000000',
+        HabitColumns.nextDueAt: 'not-a-number',
+        HabitColumns.createdAt: 1762300000000,
+        HabitColumns.updatedAt: 1762300000000,
+      });
+
+      expect(
+        habit.anchorAt,
+        DateTime.fromMillisecondsSinceEpoch(1762300000000),
+      );
+      expect(habit.nextDueAt, isNull);
+      expect(habit.recurrence?.interval, 30);
+    });
+  });
 }
