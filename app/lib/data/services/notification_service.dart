@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
-import 'package:timezone/data/latest.dart' as tzdata;
+import 'package:timezone/data/latest_all.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
 import 'notification_action_handler.dart';
@@ -161,17 +161,66 @@ class NotificationService {
 
   Future<void> syncTimezone() async {
     if (_timezoneSynced) return;
+    String identifier;
     try {
-      final info = await FlutterTimezone.getLocalTimezone();
-      tz.setLocalLocation(tz.getLocation(info.identifier));
-      _timezoneSynced = true;
+      identifier = (await FlutterTimezone.getLocalTimezone()).identifier;
     } catch (error) {
-      // Falls back to the timezone package default (UTC). Reminder instants
-      // are still converted correctly because the offset travels with the
-      // scheduled time, so this only affects how times are labelled.
+      // Leave the lookup for the next sync to retry; the device offset is used
+      // meanwhile, so reminders are not left to drift.
       debugPrint('Notification timezone lookup failed: $error');
+      identifier = '';
     }
+    tz.setLocalLocation(_resolveLocation(identifier));
+    _timezoneSynced = identifier.isNotEmpty;
     _timezoneName = tz.local.name;
+  }
+
+  /// Turns the id reported by the platform into a zone the Dart timezone
+  /// database can schedule against.
+  ///
+  /// Android reads its own (sometimes decades old) zone table, so devices still
+  /// report legacy names such as `Asia/Calcutta`, which modern databases only
+  /// know as `Asia/Kolkata`. `latest_all` keeps those legacy links, so the
+  /// direct lookup normally succeeds.
+  ///
+  /// The fallback matters more than the name: [tz.local] must never stay at the
+  /// package default (UTC), because a scheduled time is handed to the OS as
+  /// wall-clock fields plus the zone name. Scheduling in UTC would push every
+  /// reminder off by the device's distance from Greenwich.
+  tz.Location _resolveLocation(String identifier) {
+    if (identifier.isNotEmpty) {
+      try {
+        return tz.getLocation(identifier);
+      } catch (error) {
+        debugPrint(
+          'Timezone "$identifier" is not in the bundled database: $error',
+        );
+      }
+    }
+    // An id that came from the device is one the device can resolve, so it is
+    // kept as the zone name even when the offset has to be taken from the clock.
+    final offset = DateTime.now().timeZoneOffset;
+    final abbreviation = DateTime.now().timeZoneName;
+    // The OS receives this string as a zone id, so it has to be something Java
+    // can parse: the device id qualifies, and an offset such as "+05:30" (or
+    // "Z") always does.
+    final name = identifier.isEmpty ? _formatOffset(offset) : identifier;
+    debugPrint(
+      'Scheduling reminders against a fixed offset zone ($name, $abbreviation).',
+    );
+    return tz.Location(name, const [], const [], [
+      tz.TimeZone(offset, isDst: false, abbreviation: abbreviation),
+    ]);
+  }
+
+  /// Formats an offset the way `ZoneId.of` expects: "+05:30", "-08:00", "Z".
+  static String _formatOffset(Duration offset) {
+    if (offset == Duration.zero) return 'Z';
+    final absolute = offset.abs();
+    final sign = offset.isNegative ? '-' : '+';
+    final hours = absolute.inHours.toString().padLeft(2, '0');
+    final minutes = (absolute.inMinutes % 60).toString().padLeft(2, '0');
+    return '$sign$hours:$minutes';
   }
 
   Future<void> ensurePermissions() async {
