@@ -328,7 +328,7 @@ class _HabitTileState extends State<HabitTile> {
                             ),
                             const SizedBox(height: 8),
                           ],
-                          if (!(habit.isOneTime && habit.isDone)) ...[
+                          if (nextTarget != null) ...[
                             Row(
                               crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
