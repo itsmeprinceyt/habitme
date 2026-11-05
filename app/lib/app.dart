@@ -4,6 +4,7 @@ import 'package:habit_me/core/constants/app_constants.dart';
 import 'package:habit_me/core/logic/providers.dart';
 import 'package:habit_me/core/theme/app_theme.dart';
 import 'package:habit_me/core/ui/home/home_page.dart';
+import 'package:habit_me/data/services/notification_service.dart';
 
 class HabitApp extends ConsumerStatefulWidget {
   const HabitApp({super.key});
@@ -18,6 +19,11 @@ class _HabitAppState extends ConsumerState<HabitApp>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    NotificationService.instance.onDoneAction = (habitId) {
+      ref.read(habitControllerProvider.notifier).markDoneFromNotification(
+        habitId,
+      );
+    };
   }
 
   @override

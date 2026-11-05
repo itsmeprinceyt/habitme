@@ -4,13 +4,17 @@ import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
+import 'notification_action_handler.dart';
+
 class ScheduledReminder {
   const ScheduledReminder({
+    required this.habitId,
     required this.title,
     required this.body,
     required this.at,
   });
 
+  final String habitId;
   final String title;
   final String body;
   final DateTime at;
@@ -23,9 +27,15 @@ class NotificationService {
 
   static const _channelId = 'habit_reminders';
   static const _channelName = 'Habit reminders';
+  static const _categoryId = 'habit_reminder';
+  static const doneActionId = 'done';
 
   final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
+
+  /// Called when the user taps the "Done" action while the app is alive.
+  /// Receives the habit id stored in the notification payload.
+  void Function(String habitId)? onDoneAction;
 
   Future<void> _tail = Future.value();
   bool _ready = false;
@@ -45,16 +55,38 @@ class NotificationService {
     if (_ready) return;
     tzdata.initializeTimeZones();
     await syncTimezone();
-    const settings = InitializationSettings(
+    final iosCategory = DarwinNotificationCategory(
+      _categoryId,
+      actions: [
+        DarwinNotificationAction.plain(
+          doneActionId,
+          'Done',
+          options: {DarwinNotificationActionOption.foreground},
+        ),
+      ],
+    );
+    final settings = InitializationSettings(
       android: AndroidInitializationSettings('@mipmap/ic_launcher'),
       iOS: DarwinInitializationSettings(
         requestAlertPermission: false,
         requestBadgePermission: false,
         requestSoundPermission: false,
+        notificationCategories: [iosCategory],
       ),
     );
-    await _plugin.initialize(settings: settings);
+    await _plugin.initialize(
+      settings: settings,
+      onDidReceiveNotificationResponse: _handleResponse,
+      onDidReceiveBackgroundNotificationResponse:
+          habitNotificationBackgroundHandler,
+    );
     _ready = true;
+  }
+
+  void _handleResponse(NotificationResponse response) {
+    if (response.actionId == doneActionId && response.payload != null) {
+      onDoneAction?.call(response.payload!);
+    }
   }
 
   Future<void> syncTimezone() async {
@@ -95,8 +127,15 @@ class NotificationService {
         importance: Importance.high,
         priority: Priority.high,
         icon: '@mipmap/ic_launcher',
+        actions: [
+          AndroidNotificationAction(
+            doneActionId,
+            'Done',
+            showsUserInterface: false,
+          ),
+        ],
       ),
-      iOS: DarwinNotificationDetails(),
+      iOS: DarwinNotificationDetails(categoryIdentifier: _categoryId),
     );
 
     Future<void> schedule(int id, ScheduledReminder r, AndroidScheduleMode m) {
@@ -106,6 +145,7 @@ class NotificationService {
         body: r.body,
         scheduledDate: tz.TZDateTime.from(r.at, tz.local),
         notificationDetails: details,
+        payload: r.habitId,
         androidScheduleMode: m,
       );
     }

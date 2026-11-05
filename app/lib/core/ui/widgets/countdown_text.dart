@@ -64,7 +64,8 @@ class _CountdownTextState extends State<CountdownText> {
     final diff = widget.targetDate.difference(_now);
     final isPast = diff.isNegative;
     final formatted = DurationFormat.formatCountdown(diff, isPast: isPast);
-    final displayColor = widget.color ?? (isPast ? AppColors.orange : AppColors.green);
+    final displayColor =
+        widget.color ?? (isPast ? AppColors.orange : AppColors.accent);
 
     return Text(
       widget.prefix.isEmpty ? formatted : '${widget.prefix} $formatted',

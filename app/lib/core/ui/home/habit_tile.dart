@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:habit_me/core/theme/app_colors.dart';
+import 'package:habit_me/core/ui/widgets/app_switch.dart';
 import 'package:habit_me/core/ui/widgets/countdown_text.dart';
+import 'package:habit_me/core/ui/widgets/gradient_border.dart';
 import 'package:habit_me/core/utils/date_utils.dart';
 import 'package:habit_me/core/utils/expansion_preferences.dart';
 import 'package:habit_me/data/models/habit.dart';
@@ -115,7 +117,9 @@ class _HabitTileState extends State<HabitTile> {
   Widget build(BuildContext context) {
     final label = widget.label;
     // Theme color: If label has color use it, otherwise neutral grey (muted)
-    final themeColor = label?.color != null ? Color(label!.color!) : AppColors.muted;
+    final themeColor = label?.color != null
+        ? Color(label!.color!)
+        : AppColors.accentDeep;
     final done = habit.isDone;
     final strike = done && habit.isOneTime;
     final nextTarget = _relevantNextDate;
@@ -146,14 +150,26 @@ class _HabitTileState extends State<HabitTile> {
             duration: const Duration(milliseconds: 220),
             curve: Curves.easeInOut,
             decoration: BoxDecoration(
-              color: AppColors.card,
+              gradient: label?.color != null
+                  ? LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        themeColor.withValues(alpha: 0.12),
+                        AppColors.card,
+                        AppColors.card,
+                      ],
+                      stops: const [0.0, 0.45, 1.0],
+                    )
+                  : null,
+              color: label?.color != null ? null : AppColors.card,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: _isExpanded
-                    ? (label?.color != null
-                        ? themeColor.withValues(alpha: 0.5)
-                        : AppColors.white.withValues(alpha: 0.25))
-                    : AppColors.border,
+                color: label?.color != null
+                    ? themeColor.withValues(alpha: _isExpanded ? 0.55 : 0.30)
+                    : (_isExpanded
+                        ? AppColors.white.withValues(alpha: 0.25)
+                        : AppColors.border),
                 width: _isExpanded ? 1.2 : 1.0,
               ),
               boxShadow: _isExpanded && label?.color != null
@@ -178,8 +194,22 @@ class _HabitTileState extends State<HabitTile> {
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: themeColor.withValues(alpha: done ? 0.08 : 0.16),
-                        borderRadius: BorderRadius.circular(12),
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: done
+                              ? const [AppColors.surfaceLight, AppColors.surface]
+                              : [
+                                  themeColor.withValues(alpha: 0.30),
+                                  themeColor.withValues(alpha: 0.10),
+                                ],
+                        ),
+                        borderRadius: BorderRadius.circular(13),
+                        border: Border.all(
+                          color: themeColor.withValues(
+                            alpha: done ? 0.18 : 0.38,
+                          ),
+                        ),
                       ),
                       child: Icon(
                         habit.isRecurring
@@ -269,7 +299,7 @@ class _HabitTileState extends State<HabitTile> {
                       onPressed: widget.onEdit,
                       icon: const Icon(Icons.edit_outlined, size: 19),
                     ),
-                    Switch(
+                    AppSwitch(
                       value: done,
                       onChanged: (_) => widget.onToggle(),
                     ),
@@ -281,15 +311,43 @@ class _HabitTileState extends State<HabitTile> {
                   firstChild: const SizedBox(width: double.infinity),
                   secondChild: Padding(
                     padding: const EdgeInsets.only(top: 12),
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: AppColors.surfaceLight,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.border),
-                      ),
-                      child: Column(
+                    child: GradientBorder(
+                        radius: 14,
+                        padding: const EdgeInsets.all(1),
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: label?.color != null
+                              ? [
+                                  themeColor.withValues(alpha: 0.5),
+                                  AppColors.border,
+                                  themeColor.withValues(alpha: 0.5),
+                                ]
+                              : const [
+                                  AppColors.borderStrong,
+                                  AppColors.border,
+                                  AppColors.borderStrong,
+                                ],
+                        ),
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(13),
+                          decoration: BoxDecoration(
+                            gradient: label?.color != null
+                                ? LinearGradient(
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                    colors: [
+                                      Color.alphaBlend(
+                                        themeColor.withValues(alpha: 0.14),
+                                        const Color(0xFF1B2620),
+                                      ),
+                                      const Color(0xFF141C17),
+                                    ],
+                                  )
+                                : AppColors.surfaceGradient,
+                          ),
+                          child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           if (label != null) ...[
@@ -471,6 +529,7 @@ class _HabitTileState extends State<HabitTile> {
                           ],
                         ],
                       ),
+                    ),
                     ),
                   ),
                   crossFadeState: _isExpanded

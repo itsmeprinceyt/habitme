@@ -130,7 +130,7 @@ class _CalendarViewState extends ConsumerState<CalendarView> {
               ),
               selectedDecoration: const BoxDecoration(
                 shape: BoxShape.circle,
-                color: AppColors.green,
+                gradient: AppColors.accentGradient,
               ),
             ),
             calendarBuilders: CalendarBuilders(
@@ -330,12 +330,13 @@ class _FilterChipButton extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.surfaceLight
-              : AppColors.card,
+          gradient: isSelected ? AppColors.accentGradient : null,
+          color: isSelected ? null : AppColors.card,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected ? AppColors.white.withValues(alpha: 0.4) : AppColors.border,
+            color: isSelected
+                ? Colors.transparent
+                : AppColors.border,
             width: isSelected ? 1.4 : 1.0,
           ),
         ),
@@ -345,14 +346,14 @@ class _FilterChipButton extends StatelessWidget {
             Icon(
               icon,
               size: 16,
-              color: isSelected ? AppColors.white : AppColors.muted,
+              color: isSelected ? AppColors.black : AppColors.muted,
             ),
             const SizedBox(width: 6),
             Flexible(
               child: Text(
                 label,
                 style: TextStyle(
-                  color: isSelected ? AppColors.white : AppColors.muted,
+                  color: isSelected ? AppColors.black : AppColors.muted,
                   fontSize: 13,
                   fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                 ),
@@ -364,7 +365,7 @@ class _FilterChipButton extends StatelessWidget {
                   ? Icons.check_circle_rounded
                   : Icons.radio_button_unchecked_rounded,
               size: 14,
-              color: isSelected ? AppColors.white : AppColors.muted,
+              color: isSelected ? AppColors.black : AppColors.muted,
             ),
           ],
         ),
@@ -429,7 +430,9 @@ class _DayHabitItem extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final themeColor = label?.color != null ? Color(label!.color!) : AppColors.muted;
+    final themeColor = label?.color != null
+        ? Color(label!.color!)
+        : AppColors.accentDeep;
     final done = habit.isDone;
 
     return Padding(
@@ -452,8 +455,18 @@ class _DayHabitItem extends ConsumerWidget {
                   width: 34,
                   height: 34,
                   decoration: BoxDecoration(
-                    color: themeColor.withValues(alpha: 0.14),
-                    borderRadius: BorderRadius.circular(8),
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        themeColor.withValues(alpha: 0.32),
+                        themeColor.withValues(alpha: 0.10),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: themeColor.withValues(alpha: 0.4),
+                    ),
                   ),
                   child: Icon(
                     habit.isRecurring

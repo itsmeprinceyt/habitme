@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:habit_me/core/logic/providers.dart';
 import 'package:habit_me/core/theme/app_colors.dart';
 import 'package:habit_me/core/ui/habit_form/recurrence_picker.dart';
+import 'package:habit_me/core/ui/widgets/app_switch.dart';
 import 'package:habit_me/data/models/habit.dart';
 import 'package:habit_me/data/models/label.dart';
 import 'package:habit_me/data/models/recurrence.dart';
@@ -130,7 +131,7 @@ class _HabitFormSheetState extends ConsumerState<HabitFormSheet> {
     return Theme(
       data: Theme.of(context).copyWith(
         colorScheme: Theme.of(context).colorScheme.copyWith(
-              primary: AppColors.green,
+              primary: AppColors.accent,
               surface: AppColors.card,
             ),
       ),
@@ -164,7 +165,7 @@ class _HabitFormSheetState extends ConsumerState<HabitFormSheet> {
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(nameController.text.trim()),
-            child: const Text('Create', style: TextStyle(color: AppColors.green)),
+            child: const Text('Create', style: TextStyle(color: AppColors.accent)),
           ),
         ],
       ),
@@ -346,12 +347,19 @@ class _HabitFormSheetState extends ConsumerState<HabitFormSheet> {
                       width: 36,
                       height: 36,
                       decoration: BoxDecoration(
-                        color: AppColors.surfaceLight,
-                        borderRadius: BorderRadius.circular(10),
+                        gradient: AppColors.accentGradient,
+                        borderRadius: BorderRadius.circular(11),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.accent.withValues(alpha: 0.2),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                       ),
                       child: Icon(
                         _isEditing ? Icons.edit_note_rounded : Icons.add_task_rounded,
-                        color: AppColors.white,
+                        color: AppColors.black,
                         size: 20,
                       ),
                     ),
@@ -616,7 +624,7 @@ class _HabitFormSheetState extends ConsumerState<HabitFormSheet> {
                                   ],
                                 ),
                               ),
-                              Switch(
+                              AppSwitch(
                                 value: _notify,
                                 onChanged: (value) => setState(() => _notify = value),
                               ),
@@ -652,24 +660,52 @@ class _HabitFormSheetState extends ConsumerState<HabitFormSheet> {
                       const SizedBox(width: 10),
                     ],
                     Expanded(
-                      child: FilledButton(
-                        onPressed: _saving ? null : _save,
-                        style: FilledButton.styleFrom(
-                          backgroundColor: AppColors.green,
-                          foregroundColor: AppColors.black,
-                          padding: const EdgeInsets.symmetric(vertical: 13),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          gradient: _saving ? null : AppColors.accentGradient,
+                          color: _saving ? AppColors.surfaceLight : null,
+                          boxShadow: _saving
+                              ? null
+                              : [
+                                  BoxShadow(
+                                    color: AppColors.accent.withValues(
+                                      alpha: 0.25,
+                                    ),
+                                    blurRadius: 16,
+                                    offset: const Offset(0, 6),
+                                  ),
+                                ],
                         ),
-                        child: _saving
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.black),
-                              )
-                            : Text(
-                                _isEditing ? 'Save Changes' : 'Create Habit',
-                                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
-                              ),
+                        child: FilledButton(
+                          onPressed: _saving ? null : _save,
+                          style: FilledButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            foregroundColor: AppColors.black,
+                            disabledForegroundColor: AppColors.faint,
+                            padding: const EdgeInsets.symmetric(vertical: 13),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: _saving
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: AppColors.muted,
+                                  ),
+                                )
+                              : Text(
+                                  _isEditing ? 'Save Changes' : 'Create Habit',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 15,
+                                    letterSpacing: 0.2,
+                                  ),
+                                ),
+                        ),
                       ),
                     ),
                   ],
@@ -698,11 +734,13 @@ class _HabitFormSheetState extends ConsumerState<HabitFormSheet> {
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
           color: isSelected
-              ? (color ?? AppColors.white).withValues(alpha: 0.16)
+              ? (color ?? AppColors.accent).withValues(alpha: 0.14)
               : AppColors.card,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: isSelected ? (color ?? AppColors.white) : AppColors.border,
+            color: isSelected
+                ? (color ?? AppColors.accent)
+                : AppColors.border,
             width: isSelected ? 1.4 : 1.0,
           ),
         ),
@@ -720,7 +758,7 @@ class _HabitFormSheetState extends ConsumerState<HabitFormSheet> {
             Text(
               name,
               style: TextStyle(
-                color: isSelected ? AppColors.white : AppColors.muted,
+                color: isSelected ? AppColors.accent : AppColors.muted,
                 fontSize: 12.5,
                 fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
               ),
@@ -756,10 +794,14 @@ class _TypeSelectionCard extends StatelessWidget {
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.surfaceLight : AppColors.card,
+          color: isSelected
+              ? AppColors.accent.withValues(alpha: 0.08)
+              : AppColors.card,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected ? AppColors.white.withValues(alpha: 0.45) : AppColors.border,
+            color: isSelected
+                ? AppColors.accent.withValues(alpha: 0.55)
+                : AppColors.border,
             width: isSelected ? 1.4 : 1.0,
           ),
         ),
@@ -768,12 +810,16 @@ class _TypeSelectionCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(icon, size: 18, color: isSelected ? AppColors.white : AppColors.muted),
+                Icon(
+                  icon,
+                  size: 18,
+                  color: isSelected ? AppColors.accent : AppColors.muted,
+                ),
                 const Spacer(),
                 Icon(
                   isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
                   size: 16,
-                  color: isSelected ? AppColors.white : AppColors.muted,
+                  color: isSelected ? AppColors.accent : AppColors.muted,
                 ),
               ],
             ),
@@ -822,7 +868,7 @@ class _DateTimeButton extends StatelessWidget {
         ),
         child: Row(
           children: [
-            const Icon(Icons.calendar_month_outlined, color: AppColors.white, size: 20),
+            const Icon(Icons.calendar_month_outlined, color: AppColors.accent, size: 20),
             const SizedBox(width: 10),
             Expanded(
               child: Text(

@@ -32,6 +32,18 @@ class HabitController extends AsyncNotifier<List<Habit>> {
     await _syncNotifications();
   }
 
+  /// Marks a habit done from a notification action. Unlike [toggle], this is
+  /// idempotent: an already-done habit is left untouched.
+  Future<void> markDoneFromNotification(String id) async {
+    final habit = _find(id);
+    if (habit == null || habit.isDone) return;
+
+    final updated = await _repo.toggleDone(habit, true);
+    _replace(updated);
+
+    await _syncNotifications();
+  }
+
   Future<void> add(Habit habit) async {
     await _repo.insert(habit);
 

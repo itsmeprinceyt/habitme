@@ -5,6 +5,7 @@ import 'package:habit_me/core/logic/providers.dart';
 import 'package:habit_me/core/theme/app_colors.dart';
 import 'package:habit_me/core/ui/home/habit_tile.dart';
 import 'package:habit_me/core/ui/habit_form/habit_form_sheet.dart';
+import 'package:habit_me/core/ui/widgets/animated_entrance.dart';
 import 'package:habit_me/core/ui/widgets/label_subheader.dart';
 import 'package:habit_me/core/ui/widgets/section_header.dart';
 import 'package:habit_me/core/utils/expansion_preferences.dart';
@@ -148,7 +149,7 @@ class _HabitListViewState extends ConsumerState<HabitListView> {
 
     return async.when(
       loading: () => const Center(
-        child: CircularProgressIndicator(color: AppColors.green),
+        child: CircularProgressIndicator(color: AppColors.accent),
       ),
       error: (error, _) => const Center(
         child: Text(
@@ -170,7 +171,7 @@ class _HabitListViewState extends ConsumerState<HabitListView> {
             SectionHeader(
               title: 'Active',
               count: active.length,
-              accent: AppColors.green,
+              accent: AppColors.accent,
               isExpanded: _isActiveExpanded,
               onToggleExpand: _toggleActive,
             ),
@@ -279,7 +280,14 @@ class _LabelGroupViewState extends State<_LabelGroupView> {
         AnimatedCrossFade(
           firstChild: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: widget.habits.map(widget.tileBuilder).toList(),
+            children: [
+              for (var i = 0; i < widget.habits.length; i++)
+                AnimatedEntrance(
+                  delay: Duration(milliseconds: i < 8 ? 50 * i : 400),
+                  duration: const Duration(milliseconds: 380),
+                  child: widget.tileBuilder(widget.habits[i]),
+                ),
+            ],
           ),
           secondChild: const SizedBox(width: double.infinity),
           crossFadeState: _isExpanded
@@ -303,7 +311,7 @@ class _EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.task_alt_rounded, size: 56, color: AppColors.green),
+            Icon(Icons.task_alt_rounded, size: 56, color: AppColors.accent),
             SizedBox(height: 16),
             Text(
               'No habits yet',

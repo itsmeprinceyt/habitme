@@ -85,6 +85,7 @@ class HabitScheduler {
         for (final at in recurrence.upcoming(habit.anchorAt, now, perHabit)) {
           entries.add(
             ScheduledReminder(
+              habitId: habit.id,
               title: habit.name,
               body: 'Time to do it · ${recurrence.label}',
               at: at,
@@ -96,7 +97,12 @@ class HabitScheduler {
 
         if (!habit.isDone && at != null && at.isAfter(now)) {
           entries.add(
-            ScheduledReminder(title: habit.name, body: 'Reminder', at: at),
+            ScheduledReminder(
+              habitId: habit.id,
+              title: habit.name,
+              body: 'Reminder',
+              at: at,
+            ),
           );
         }
       }

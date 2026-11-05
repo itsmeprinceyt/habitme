@@ -118,7 +118,7 @@ class _RecurrencePickerState extends State<RecurrencePicker> {
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: AppColors.green),
+                      borderSide: const BorderSide(color: AppColors.accentDeep),
                     ),
                   ),
                   onChanged: (_) => _emit(),
@@ -183,17 +183,17 @@ class _RecurrencePickerState extends State<RecurrencePicker> {
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppColors.green.withValues(alpha: 0.18)
+              ? AppColors.accent.withValues(alpha: 0.14)
               : AppColors.surfaceLight,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: isSelected ? AppColors.green : AppColors.border,
+            color: isSelected ? AppColors.accent : AppColors.border,
           ),
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: isSelected ? AppColors.green : AppColors.muted,
+            color: isSelected ? AppColors.accent : AppColors.muted,
             fontSize: 12,
             fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
           ),
