@@ -21,6 +21,25 @@ class HabitController extends AsyncNotifier<List<Habit>> {
     state = AsyncData(updated);
   }
 
+  /// Rolls occurrences that have just become due forward so the countdown in
+  /// the UI restarts on the next occurrence instead of sitting at zero.
+  /// Cheap: it does nothing (no DB write, no rebuild) while nothing is due.
+  Future<void> refreshDue() async {
+    final habits = state.value;
+    if (habits == null) return;
+
+    final now = DateTime.now();
+    final isDue = habits.any(
+      (h) =>
+          h.recurrence != null &&
+          h.nextDueAt != null &&
+          !h.nextDueAt!.isAfter(now),
+    );
+    if (!isDue) return;
+
+    await reconcile();
+  }
+
   Future<void> toggle(String id) async {
     final habit = _find(id);
     if (habit == null) return;

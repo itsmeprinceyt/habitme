@@ -30,4 +30,3 @@ class LabelController extends AsyncNotifier<List<HabitLabel>> {
     ref.read(habitControllerProvider.notifier).reconcile();
   }
 }
-

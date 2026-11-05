@@ -108,8 +108,10 @@ class _RecurrencePickerState extends State<RecurrencePicker> {
                     fontSize: 15,
                   ),
                   decoration: InputDecoration(
-                    contentPadding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 8,
+                    ),
                     filled: true,
                     fillColor: AppColors.card,
                     border: OutlineInputBorder(

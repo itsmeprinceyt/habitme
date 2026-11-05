@@ -21,12 +21,7 @@ abstract final class AppTheme {
       useMaterial3: true,
       brightness: Brightness.dark,
       fontFamily: defaultFontFamily,
-      fontFamilyFallback: const [
-        'Roboto',
-        'Arial',
-        'Helvetica',
-        'sans-serif',
-      ],
+      fontFamilyFallback: const ['Roboto', 'Arial', 'Helvetica', 'sans-serif'],
       colorScheme: scheme,
       scaffoldBackgroundColor: AppColors.black,
       canvasColor: AppColors.black,
@@ -85,9 +80,7 @@ abstract final class AppTheme {
           fontWeight: FontWeight.w800,
           letterSpacing: 0.3,
         ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(18),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       ),
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith(

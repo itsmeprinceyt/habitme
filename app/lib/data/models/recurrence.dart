@@ -71,7 +71,11 @@ class Recurrence {
   /// Checks if an occurrence lands on the given calendar date (ignoring hour/min).
   bool occursOnDate(DateTime anchor, DateTime targetDate) {
     // If target date is before anchor day, cannot occur
-    final targetStartOfDay = DateTime(targetDate.year, targetDate.month, targetDate.day);
+    final targetStartOfDay = DateTime(
+      targetDate.year,
+      targetDate.month,
+      targetDate.day,
+    );
     final anchorStartOfDay = DateTime(anchor.year, anchor.month, anchor.day);
     if (targetStartOfDay.isBefore(anchorStartOfDay)) {
       return false;
@@ -88,7 +92,9 @@ class Recurrence {
         return diffDays >= 0 && (diffDays % interval == 0);
 
       case RecurUnit.months:
-        final totalMonths = (targetDate.year - anchor.year) * 12 + (targetDate.month - anchor.month);
+        final totalMonths =
+            (targetDate.year - anchor.year) * 12 +
+            (targetDate.month - anchor.month);
         if (totalMonths < 0 || totalMonths % interval != 0) return false;
         // Check day match (with clamped last-day-of-month logic)
         final lastDay = DateTime(targetDate.year, targetDate.month + 1, 0).day;

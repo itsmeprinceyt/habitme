@@ -49,8 +49,9 @@ class _CalendarViewState extends ConsumerState<CalendarView> {
 
     final selectedHabits = _habitsForDay(allHabits, _selectedDay);
     final selectedOneTime = selectedHabits.where((h) => h.isOneTime).toList();
-    final selectedRecurring =
-        selectedHabits.where((h) => h.isRecurring).toList();
+    final selectedRecurring = selectedHabits
+        .where((h) => h.isRecurring)
+        .toList();
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(
@@ -138,10 +139,17 @@ class _CalendarViewState extends ConsumerState<CalendarView> {
                 if (events.isEmpty) return const SizedBox.shrink();
 
                 // Extract colors for each habit: label color if present, else AppColors.muted (grey)
-                final colors = events.map((h) {
-                  final label = h.labelId != null ? labelMap[h.labelId] : null;
-                  return label?.color != null ? Color(label!.color!) : AppColors.muted;
-                }).toSet().toList();
+                final colors = events
+                    .map((h) {
+                      final label = h.labelId != null
+                          ? labelMap[h.labelId]
+                          : null;
+                      return label?.color != null
+                          ? Color(label!.color!)
+                          : AppColors.muted;
+                    })
+                    .toSet()
+                    .toList();
 
                 return Positioned(
                   bottom: 4,
@@ -240,8 +248,10 @@ class _CalendarViewState extends ConsumerState<CalendarView> {
                   ),
                   const SizedBox(width: 8),
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.surfaceLight,
                       borderRadius: BorderRadius.circular(10),
@@ -268,8 +278,10 @@ class _CalendarViewState extends ConsumerState<CalendarView> {
                           ? 'Both filters are off. Turn on One-Time or Recurring above.'
                           : 'No scheduled habits on this day.',
                       textAlign: TextAlign.center,
-                      style:
-                          const TextStyle(color: AppColors.muted, fontSize: 13.5),
+                      style: const TextStyle(
+                        color: AppColors.muted,
+                        fontSize: 13.5,
+                      ),
                     ),
                   ),
                 ),
@@ -283,7 +295,9 @@ class _CalendarViewState extends ConsumerState<CalendarView> {
                   for (final habit in selectedRecurring)
                     _DayHabitItem(
                       habit: habit,
-                      label: habit.labelId != null ? labelMap[habit.labelId] : null,
+                      label: habit.labelId != null
+                          ? labelMap[habit.labelId]
+                          : null,
                     ),
                   const SizedBox(height: 10),
                 ],
@@ -296,7 +310,9 @@ class _CalendarViewState extends ConsumerState<CalendarView> {
                   for (final habit in selectedOneTime)
                     _DayHabitItem(
                       habit: habit,
-                      label: habit.labelId != null ? labelMap[habit.labelId] : null,
+                      label: habit.labelId != null
+                          ? labelMap[habit.labelId]
+                          : null,
                     ),
                 ],
               ],
@@ -334,9 +350,7 @@ class _FilterChipButton extends StatelessWidget {
           color: isSelected ? null : AppColors.card,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected
-                ? Colors.transparent
-                : AppColors.border,
+            color: isSelected ? Colors.transparent : AppColors.border,
             width: isSelected ? 1.4 : 1.0,
           ),
         ),
@@ -375,10 +389,7 @@ class _FilterChipButton extends StatelessWidget {
 }
 
 class _CategoryHeader extends StatelessWidget {
-  const _CategoryHeader({
-    required this.title,
-    required this.count,
-  });
+  const _CategoryHeader({required this.title, required this.count});
 
   final String title;
   final int count;
@@ -420,10 +431,7 @@ class _CategoryHeader extends StatelessWidget {
 }
 
 class _DayHabitItem extends ConsumerWidget {
-  const _DayHabitItem({
-    required this.habit,
-    this.label,
-  });
+  const _DayHabitItem({required this.habit, this.label});
 
   final Habit habit;
   final HabitLabel? label;
@@ -499,8 +507,8 @@ class _DayHabitItem extends ConsumerWidget {
                         habit.isRecurring
                             ? habit.recurrence!.label
                             : (habit.oneTimeAt != null
-                                ? AppDateUtils.formatTime(habit.oneTimeAt!)
-                                : 'One-time habit'),
+                                  ? AppDateUtils.formatTime(habit.oneTimeAt!)
+                                  : 'One-time habit'),
                         style: const TextStyle(
                           color: AppColors.white,
                           fontSize: 12,

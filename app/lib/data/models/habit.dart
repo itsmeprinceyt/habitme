@@ -44,8 +44,9 @@ class Habit {
     DateTime? anchorAt,
     DateTime? now,
   }) {
-    final created = now ?? DateTime.now();
-    final anchor = anchorAt ?? created;
+    // Schedules never carry seconds: everything is anchored to a whole minute.
+    final created = _minuteOf(now ?? DateTime.now());
+    final anchor = _minuteOf(anchorAt ?? created);
     return Habit(
       id: const Uuid().v4(),
       name: name.trim(),
@@ -53,7 +54,9 @@ class Habit {
       recurrence: recurrence,
       notify: notify,
       isDone: false,
-      oneTimeAt: recurrence != null ? null : oneTimeAt,
+      oneTimeAt: recurrence != null || oneTimeAt == null
+          ? null
+          : _minuteOf(oneTimeAt),
       anchorAt: anchor,
       nextDueAt: recurrence?.nextAfter(anchor, created),
       completedAt: null,
@@ -152,4 +155,7 @@ class Habit {
     if (value == null) return null;
     return DateTime.fromMillisecondsSinceEpoch(value as int);
   }
+
+  static DateTime _minuteOf(DateTime dt) =>
+      DateTime(dt.year, dt.month, dt.day, dt.hour, dt.minute);
 }

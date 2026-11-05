@@ -3,11 +3,7 @@ import 'package:habit_me/core/theme/app_colors.dart';
 
 /// A smooth, spring-animated toggle switch styled for the stone theme.
 class AppSwitch extends StatelessWidget {
-  const AppSwitch({
-    super.key,
-    required this.value,
-    required this.onChanged,
-  });
+  const AppSwitch({super.key, required this.value, required this.onChanged});
 
   final bool value;
   final ValueChanged<bool> onChanged;
