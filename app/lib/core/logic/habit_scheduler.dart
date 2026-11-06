@@ -53,7 +53,6 @@ class HabitScheduler {
   }) async {
     try {
       await _notifications.init();
-      await _notifications.syncTimezone();
 
       if (askPermissions && habits.any((h) => h.notify)) {
         await _notifications.ensurePermissions();
