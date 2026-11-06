@@ -41,7 +41,9 @@ class HabitScheduler {
     // Reminders are re-armed in the background. `sync` logs every failure
     // itself, and the list must never sit in a loading state - or show an
     // error - because a platform channel was slow or refused the schedule.
-    unawaited(sync(result, now));
+    unawaited(
+      sync(result, now, askPermissions: result.any((h) => h.notify)),
+    );
 
     return result;
   }

@@ -162,36 +162,64 @@ class NotificationService {
     }
   }
 
+  bool _notificationsDenied = false;
+
   Future<void> ensurePermissions() async {
+    if (_asked) return;
+    _asked = true;
     await init();
     final android = _android;
     if (android != null) {
       await android.requestNotificationsPermission();
       _exactAlarmsBlocked =
           !(await android.canScheduleExactNotifications() ?? true);
-      if (_exactAlarmsBlocked && !_asked) {
+      if (_exactAlarmsBlocked) {
         await android.requestExactAlarmsPermission();
       }
     }
     await _ios?.requestPermissions(alert: true, badge: true, sound: true);
-    _asked = true;
+  }
+
+  /// Re-arms the whole schedule after notifications go from denied to granted:
+  /// alarms scheduled while permission was missing never posted, and the
+  /// diff-based sync would otherwise consider them already armed.
+  void _rearmIfGranted(bool enabled) {
+    if (_notificationsDenied && enabled) {
+      _initialSyncDone = false;
+      _signature = '';
+    }
+    _notificationsDenied = !enabled;
   }
 
   Future<void> checkPermissionsOnLaunch() async {
     await init();
     final android = _android;
     if (android != null) {
-      final enabled = await android.areNotificationsEnabled() ?? false;
+      bool enabled = true;
+      try {
+        enabled = await android.areNotificationsEnabled() ?? false;
+      } catch (_) {}
+      _rearmIfGranted(enabled);
       if (!enabled) {
-        await android.requestNotificationsPermission();
+        try {
+          await android.requestNotificationsPermission();
+        } catch (_) {}
+        try {
+          enabled = await android.areNotificationsEnabled() ?? enabled;
+        } catch (_) {}
+        _rearmIfGranted(enabled);
       }
-      final exact = await android.canScheduleExactNotifications() ?? true;
-      _exactAlarmsBlocked = !exact;
-      if (!exact) {
-        await android.requestExactAlarmsPermission();
-      }
+      try {
+        final exact = await android.canScheduleExactNotifications() ?? true;
+        _exactAlarmsBlocked = !exact;
+        if (!exact) {
+          await android.requestExactAlarmsPermission();
+        }
+      } catch (_) {}
     }
-    await _ios?.requestPermissions(alert: true, badge: true, sound: true);
+    try {
+      await _ios?.requestPermissions(alert: true, badge: true, sound: true);
+    } catch (_) {}
   }
 
   /// Opens the system page where the user can allow exact alarms.
