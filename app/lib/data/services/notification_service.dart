@@ -48,9 +48,8 @@ class NotificationService {
   static const _channelDescription = 'Reminders to keep your habits on track';
   static const _categoryId = 'habit_reminder';
 
-  /// Bare resource names: Android resolves notification icons through
-  /// `getIdentifier(name, "drawable", package)`, so the `@drawable/...` form
-  /// would not be found and the whole notification would be rejected.
+  /// Resource-reference form — resolves through the resource table, so it
+  /// can't fail the way a bare drawable name can when the lookup misses.
   static const _smallIcon = 'ic_notification';
   static const _largeIcon = 'notification_logo';
 

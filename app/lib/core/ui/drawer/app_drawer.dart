@@ -4,6 +4,7 @@ import 'package:habit_me/core/constants/app_constants.dart';
 import 'package:habit_me/core/logic/providers.dart';
 import 'package:habit_me/core/theme/app_colors.dart';
 import 'package:habit_me/core/ui/drawer/manage_labels_sheet.dart';
+import 'package:habit_me/core/ui/home/log_viewer_page.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class AppDrawer extends ConsumerWidget {
@@ -105,6 +106,22 @@ class AppDrawer extends ConsumerWidget {
                 style: TextStyle(color: AppColors.muted),
               ),
               onTap: openManageLabels,
+            ),
+            ListTile(
+              leading: const Icon(Icons.bug_report_outlined),
+              title: const Text('Logs'),
+              subtitle: const Text(
+                'Live app logs for debugging',
+                style: TextStyle(color: AppColors.muted),
+              ),
+              onTap: () {
+                navigator.pop();
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const LogViewerPage(),
+                  ),
+                );
+              },
             ),
             ListTile(
               leading: const Icon(Icons.file_upload_outlined),
