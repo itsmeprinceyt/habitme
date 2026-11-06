@@ -163,6 +163,7 @@ class NotificationService {
   }
 
   Future<void> ensurePermissions() async {
+    await init();
     final android = _android;
     if (android != null) {
       await android.requestNotificationsPermission();
@@ -174,6 +175,23 @@ class NotificationService {
     }
     await _ios?.requestPermissions(alert: true, badge: true, sound: true);
     _asked = true;
+  }
+
+  Future<void> checkPermissionsOnLaunch() async {
+    await init();
+    final android = _android;
+    if (android != null) {
+      final enabled = await android.areNotificationsEnabled() ?? false;
+      if (!enabled) {
+        await android.requestNotificationsPermission();
+      }
+      final exact = await android.canScheduleExactNotifications() ?? true;
+      _exactAlarmsBlocked = !exact;
+      if (!exact) {
+        await android.requestExactAlarmsPermission();
+      }
+    }
+    await _ios?.requestPermissions(alert: true, badge: true, sound: true);
   }
 
   /// Opens the system page where the user can allow exact alarms.
