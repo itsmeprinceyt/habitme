@@ -11,6 +11,10 @@ class LabelController extends AsyncNotifier<List<HabitLabel>> {
     return _repo.getAll();
   }
 
+  Future<void> reload() async {
+    state = AsyncData(await _repo.getAll());
+  }
+
   Future<HabitLabel> addLabel(String name, {int? color}) async {
     final label = HabitLabel.create(name: name, color: color);
     await _repo.insert(label);

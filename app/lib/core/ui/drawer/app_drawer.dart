@@ -13,6 +13,8 @@ class AppDrawer extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final service = ref.read(backupServiceProvider);
+    final labelController = ref.read(labelControllerProvider.notifier);
+    final habitController = ref.read(habitControllerProvider.notifier);
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
 
@@ -37,8 +39,8 @@ class AppDrawer extends ConsumerWidget {
       try {
         final summary = await service.importSql();
         if (summary == null) return;
-        await ref.read(labelControllerProvider.notifier).build();
-        await ref.read(habitControllerProvider.notifier).reconcile();
+        await labelController.reload();
+        await habitController.reconcile();
 
         final notes = <String>[
           if (summary.unlabelledHabits > 0)
@@ -117,9 +119,7 @@ class AppDrawer extends ConsumerWidget {
               onTap: () {
                 navigator.pop();
                 Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const LogViewerPage(),
-                  ),
+                  MaterialPageRoute(builder: (_) => const LogViewerPage()),
                 );
               },
             ),
