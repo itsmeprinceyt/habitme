@@ -61,32 +61,65 @@ class _LogViewerPageState extends State<LogViewerPage> {
           ),
         ],
       ),
-      body: lines.isEmpty
-          ? const Center(
-              child: Text(
-                'No logs yet',
-                style: TextStyle(color: AppColors.muted),
-              ),
-            )
-          : ListView.builder(
-              controller: _scroll,
-              padding: const EdgeInsets.all(12),
-              itemCount: lines.length,
-              itemBuilder: (context, i) => SelectableText(
-                lines[i],
-                style: const TextStyle(
-                  color: AppColors.white,
-                  fontSize: 11,
-                  fontFamily: 'monospace',
-                  height: 1.4,
-                ),
-              ),
+      body: Column(
+        children: [
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceLight,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.accent.withValues(alpha: 0.25)),
             ),
+            child: const Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  Icons.info_outline_rounded,
+                  size: 18,
+                  color: AppColors.accent,
+                ),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Facing any error or notification not working? Tap the copy icon above and send the logs — they help debug it fast.',
+                    style: TextStyle(color: AppColors.white, fontSize: 12, height: 1.35),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(child: _buildList(lines)),
+        ],
+      ),
       floatingActionButton: FloatingActionButton.small(
         heroTag: 'logs_bottom',
         tooltip: 'Latest',
         onPressed: _scrollToEnd,
         child: const Icon(Icons.arrow_downward_rounded),
+      ),
+    );
+  }
+
+  Widget _buildList(List<String> lines) {
+    if (lines.isEmpty) {
+      return const Center(
+        child: Text('No logs yet', style: TextStyle(color: AppColors.muted)),
+      );
+    }
+    return ListView.builder(
+      controller: _scroll,
+      padding: const EdgeInsets.all(12),
+      itemCount: lines.length,
+      itemBuilder: (context, i) => SelectableText(
+        lines[i],
+        style: const TextStyle(
+          color: AppColors.white,
+          fontSize: 11,
+          fontFamily: 'monospace',
+          height: 1.4,
+        ),
       ),
     );
   }
