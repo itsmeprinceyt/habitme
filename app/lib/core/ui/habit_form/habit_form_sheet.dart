@@ -216,6 +216,15 @@ class _HabitFormSheetState extends ConsumerState<HabitFormSheet> {
     setState(() => _saving = true);
 
     try {
+      // Request permissions directly from the user's Save action.
+      if (_notify) {
+        try {
+          await NotificationService.instance.ensurePermissions();
+        } catch (e) {
+          debugPrint('Notification permission error: $e');
+        }
+      }
+
       final existing = widget.habit;
       if (existing == null) {
         final habit = Habit.create(
@@ -698,11 +707,6 @@ class _HabitFormSheetState extends ConsumerState<HabitFormSheet> {
                                 value: _notify,
                                 onChanged: (value) {
                                   setState(() => _notify = value);
-                                  if (value) {
-                                    NotificationService.instance
-                                        .ensurePermissions()
-                                        .catchError((_) {});
-                                  }
                                 },
                               ),
                             ],

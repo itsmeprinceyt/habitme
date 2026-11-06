@@ -54,12 +54,13 @@ class HabitScheduler {
     try {
       await _notifications.init();
 
-      // Permission prompts must never block scheduling — a failure here
-      // would silently drop every reminder.
       if (askPermissions && habits.any((h) => h.notify)) {
         try {
           await _notifications.ensurePermissions();
-        } catch (_) {}
+        } catch (e, stackTrace) {
+          debugPrint('Notification permission request failed: $e');
+          debugPrintStack(stackTrace: stackTrace);
+        }
       }
 
       await _notifications.replaceAll(_plan(habits, now));
