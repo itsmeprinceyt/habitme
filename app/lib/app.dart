@@ -40,6 +40,12 @@ class _HabitAppState extends ConsumerState<HabitApp>
           .markDoneFromNotification(habitId);
     };
 
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      NotificationService.instance.checkPermissionsOnLaunch().catchError(
+        (_) {},
+      );
+    });
+
     _armDueTicker();
   }
 

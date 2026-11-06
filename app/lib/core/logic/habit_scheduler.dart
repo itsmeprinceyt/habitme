@@ -41,7 +41,9 @@ class HabitScheduler {
     // Reminders are re-armed in the background. `sync` logs every failure
     // itself, and the list must never sit in a loading state - or show an
     // error - because a platform channel was slow or refused the schedule.
-    unawaited(sync(result, now));
+    unawaited(
+      sync(result, now, askPermissions: result.any((h) => h.notify)),
+    );
 
     return result;
   }
@@ -55,7 +57,12 @@ class HabitScheduler {
       await _notifications.init();
 
       if (askPermissions && habits.any((h) => h.notify)) {
-        await _notifications.ensurePermissions();
+        try {
+          await _notifications.ensurePermissions();
+        } catch (e, stackTrace) {
+          debugPrint('Notification permission request failed: $e');
+          debugPrintStack(stackTrace: stackTrace);
+        }
       }
 
       await _notifications.replaceAll(_plan(habits, now));

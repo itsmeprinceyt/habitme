@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:habit_me/data/services/notification_service.dart';
 import 'package:intl/intl.dart';
 import 'package:habit_me/core/logic/providers.dart';
 import 'package:habit_me/core/theme/app_colors.dart';
@@ -50,7 +51,7 @@ class _HabitFormSheetState extends ConsumerState<HabitFormSheet> {
     _nameController = TextEditingController(text: habit?.name ?? '');
     _selectedLabelId = habit?.labelId;
     _isRecurring = habit?.isRecurring ?? true;
-    _notify = habit?.notify ?? false;
+    _notify = habit?.notify ?? true;
     _recurrence =
         habit?.recurrence ??
         const Recurrence(unit: RecurUnit.days, interval: 1);
@@ -215,6 +216,15 @@ class _HabitFormSheetState extends ConsumerState<HabitFormSheet> {
     setState(() => _saving = true);
 
     try {
+      // Request permissions directly from the user's Save action.
+      if (_notify) {
+        try {
+          await NotificationService.instance.ensurePermissions();
+        } catch (e) {
+          debugPrint('Notification permission error: $e');
+        }
+      }
+
       final existing = widget.habit;
       if (existing == null) {
         final habit = Habit.create(
@@ -695,8 +705,9 @@ class _HabitFormSheetState extends ConsumerState<HabitFormSheet> {
                               ),
                               AppSwitch(
                                 value: _notify,
-                                onChanged: (value) =>
-                                    setState(() => _notify = value),
+                                onChanged: (value) {
+                                  setState(() => _notify = value);
+                                },
                               ),
                             ],
                           ),

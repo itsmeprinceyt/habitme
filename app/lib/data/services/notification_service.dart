@@ -48,9 +48,8 @@ class NotificationService {
   static const _channelDescription = 'Reminders to keep your habits on track';
   static const _categoryId = 'habit_reminder';
 
-  /// Bare resource names: Android resolves notification icons through
-  /// `getIdentifier(name, "drawable", package)`, so the `@drawable/...` form
-  /// would not be found and the whole notification would be rejected.
+  /// Resource-reference form — resolves through the resource table, so it
+  /// can't fail the way a bare drawable name can when the lookup misses.
   static const _smallIcon = 'ic_notification';
   static const _largeIcon = 'notification_logo';
 
@@ -162,18 +161,64 @@ class NotificationService {
     }
   }
 
+  bool _notificationsDenied = false;
+
   Future<void> ensurePermissions() async {
+    if (_asked) return;
+    _asked = true;
+    await init();
     final android = _android;
     if (android != null) {
       await android.requestNotificationsPermission();
       _exactAlarmsBlocked =
           !(await android.canScheduleExactNotifications() ?? true);
-      if (_exactAlarmsBlocked && !_asked) {
+      if (_exactAlarmsBlocked) {
         await android.requestExactAlarmsPermission();
       }
     }
     await _ios?.requestPermissions(alert: true, badge: true, sound: true);
-    _asked = true;
+  }
+
+  /// Re-arms the whole schedule after notifications go from denied to granted:
+  /// alarms scheduled while permission was missing never posted, and the
+  /// diff-based sync would otherwise consider them already armed.
+  void _rearmIfGranted(bool enabled) {
+    if (_notificationsDenied && enabled) {
+      _initialSyncDone = false;
+      _signature = '';
+    }
+    _notificationsDenied = !enabled;
+  }
+
+  Future<void> checkPermissionsOnLaunch() async {
+    await init();
+    final android = _android;
+    if (android != null) {
+      bool enabled = true;
+      try {
+        enabled = await android.areNotificationsEnabled() ?? false;
+      } catch (_) {}
+      _rearmIfGranted(enabled);
+      if (!enabled) {
+        try {
+          await android.requestNotificationsPermission();
+        } catch (_) {}
+        try {
+          enabled = await android.areNotificationsEnabled() ?? enabled;
+        } catch (_) {}
+        _rearmIfGranted(enabled);
+      }
+      try {
+        final exact = await android.canScheduleExactNotifications() ?? true;
+        _exactAlarmsBlocked = !exact;
+        if (!exact) {
+          await android.requestExactAlarmsPermission();
+        }
+      } catch (_) {}
+    }
+    try {
+      await _ios?.requestPermissions(alert: true, badge: true, sound: true);
+    } catch (_) {}
   }
 
   /// Opens the system page where the user can allow exact alarms.

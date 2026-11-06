@@ -4,6 +4,7 @@ import 'package:habit_me/core/constants/app_constants.dart';
 import 'package:habit_me/core/logic/providers.dart';
 import 'package:habit_me/core/theme/app_colors.dart';
 import 'package:habit_me/core/ui/drawer/manage_labels_sheet.dart';
+import 'package:habit_me/core/ui/home/log_viewer_page.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class AppDrawer extends ConsumerWidget {
@@ -12,6 +13,8 @@ class AppDrawer extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final service = ref.read(backupServiceProvider);
+    final labelController = ref.read(labelControllerProvider.notifier);
+    final habitController = ref.read(habitControllerProvider.notifier);
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
 
@@ -36,8 +39,8 @@ class AppDrawer extends ConsumerWidget {
       try {
         final summary = await service.importSql();
         if (summary == null) return;
-        await ref.read(labelControllerProvider.notifier).build();
-        await ref.read(habitControllerProvider.notifier).reconcile();
+        await labelController.reload();
+        await habitController.reconcile();
 
         final notes = <String>[
           if (summary.unlabelledHabits > 0)
@@ -105,6 +108,20 @@ class AppDrawer extends ConsumerWidget {
                 style: TextStyle(color: AppColors.muted),
               ),
               onTap: openManageLabels,
+            ),
+            ListTile(
+              leading: const Icon(Icons.bug_report_outlined),
+              title: const Text('Logs'),
+              subtitle: const Text(
+                'Live app logs for debugging',
+                style: TextStyle(color: AppColors.muted),
+              ),
+              onTap: () {
+                navigator.pop();
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const LogViewerPage()),
+                );
+              },
             ),
             ListTile(
               leading: const Icon(Icons.file_upload_outlined),
