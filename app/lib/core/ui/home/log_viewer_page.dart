@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:habit_me/core/theme/app_colors.dart';
 import 'package:habit_me/core/utils/app_log.dart';
+import 'package:habit_me/core/ui/widgets/ad_banner.dart';
 
 class LogViewerPage extends StatefulWidget {
   const LogViewerPage({super.key});
@@ -63,6 +64,7 @@ class _LogViewerPageState extends State<LogViewerPage> {
       ),
       body: Column(
         children: [
+          const AdBanner(),
           Container(
             width: double.infinity,
             margin: const EdgeInsets.fromLTRB(12, 12, 12, 0),
@@ -70,7 +72,9 @@ class _LogViewerPageState extends State<LogViewerPage> {
             decoration: BoxDecoration(
               color: AppColors.surfaceLight,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.accent.withValues(alpha: 0.25)),
+              border: Border.all(
+                color: AppColors.accent.withValues(alpha: 0.25),
+              ),
             ),
             child: const Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -84,7 +88,11 @@ class _LogViewerPageState extends State<LogViewerPage> {
                 Expanded(
                   child: Text(
                     'Facing any error or notification not working? Tap the copy icon above and send the logs — they help debug it fast.',
-                    style: TextStyle(color: AppColors.white, fontSize: 12, height: 1.35),
+                    style: TextStyle(
+                      color: AppColors.white,
+                      fontSize: 12,
+                      height: 1.35,
+                    ),
                   ),
                 ),
               ],
@@ -93,6 +101,7 @@ class _LogViewerPageState extends State<LogViewerPage> {
           Expanded(child: _buildList(lines)),
         ],
       ),
+      bottomNavigationBar: const SafeArea(child: AdBanner()),
       floatingActionButton: FloatingActionButton.small(
         heroTag: 'logs_bottom',
         tooltip: 'Latest',
