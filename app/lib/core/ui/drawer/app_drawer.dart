@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:habit_me/core/constants/app_constants.dart';
 import 'package:habit_me/core/logic/providers.dart';
 import 'package:habit_me/core/theme/app_colors.dart';
+import 'package:habit_me/core/ui/drawer/guide_page.dart';
 import 'package:habit_me/core/ui/drawer/manage_labels_sheet.dart';
 import 'package:habit_me/core/ui/home/log_viewer_page.dart';
 import 'package:habit_me/data/services/ads_service.dart';
@@ -117,6 +118,20 @@ class AppDrawer extends ConsumerWidget {
             const _DrawerHeader(),
             const Divider(height: 1),
             const SizedBox(height: 8),
+            ListTile(
+              leading: const Icon(Icons.menu_book_rounded),
+              title: const Text('Guide'),
+              subtitle: const Text(
+                'How to use HabitMe & app details',
+                style: TextStyle(color: AppColors.muted),
+              ),
+              onTap: () {
+                navigator.pop();
+                navigator.push(
+                  MaterialPageRoute(builder: (_) => const GuidePage()),
+                );
+              },
+            ),
             ListTile(
               leading: const Icon(Icons.label_outline_rounded),
               title: const Text('Manage Labels'),

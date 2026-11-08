@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:habit_me/data/models/habit.dart';
@@ -41,9 +40,7 @@ class HabitScheduler {
     // Reminders are re-armed in the background. `sync` logs every failure
     // itself, and the list must never sit in a loading state - or show an
     // error - because a platform channel was slow or refused the schedule.
-    unawaited(
-      sync(result, now, askPermissions: result.any((h) => h.notify)),
-    );
+    unawaited(sync(result, now, askPermissions: result.any((h) => h.notify)));
 
     return result;
   }
@@ -73,18 +70,7 @@ class HabitScheduler {
   }
 
   List<ScheduledReminder> _plan(List<Habit> habits, DateTime now) {
-    final recurringCount = habits
-        .where((h) => h.isRecurring && h.notify)
-        .length;
-
-    final perHabit = recurringCount == 0
-        ? 0
-        : min(perHabitCap, max(3, globalCap ~/ recurringCount));
-
-    // One-time reminders are single-shot and can't be regenerated, so they get
-    // priority over recurring reminders when the global cap is hit.
-    final oneTime = <ScheduledReminder>[];
-    final recurring = <ScheduledReminder>[];
+    final allReminders = <ScheduledReminder>[];
 
     for (final habit in habits) {
       if (!habit.notify) continue;
@@ -92,8 +78,13 @@ class HabitScheduler {
       final recurrence = habit.recurrence;
 
       if (recurrence != null) {
-        for (final at in recurrence.upcoming(habit.anchorAt, now, perHabit)) {
-          recurring.add(
+        // Generate up to perHabitCap upcoming occurrences for each recurring habit
+        for (final at in recurrence.upcoming(
+          habit.anchorAt,
+          now,
+          perHabitCap,
+        )) {
+          allReminders.add(
             ScheduledReminder(
               key: _key(habit, at),
               habitId: habit.id,
@@ -109,7 +100,7 @@ class HabitScheduler {
             : _toMinute(habit.oneTimeAt!);
 
         if (!habit.isDone && scheduled != null && scheduled.isAfter(now)) {
-          oneTime.add(
+          allReminders.add(
             ScheduledReminder(
               key: _key(habit, scheduled),
               habitId: habit.id,
@@ -122,12 +113,12 @@ class HabitScheduler {
       }
     }
 
-    int byTime(ScheduledReminder a, ScheduledReminder b) =>
-        a.at.compareTo(b.at);
-    oneTime.sort(byTime);
-    recurring.sort(byTime);
+    // Sort all upcoming reminders chronologically so the earliest ones are scheduled first!
+    // E.g., if Habit A is every 12h and Habit B is every 24h:
+    // A (morning), B (morning), A (night), B (next day)...
+    allReminders.sort((a, b) => a.at.compareTo(b.at));
 
-    return [...oneTime, ...recurring].take(globalCap).toList();
+    return allReminders.take(globalCap).toList();
   }
 
   /// A reminder's identity only changes when the habit or the exact minute it
