@@ -24,14 +24,6 @@ class _LogViewerPageState extends ConsumerState<LogViewerPage> {
     super.dispose();
   }
 
-  void _scrollToEnd() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scroll.hasClients) {
-        _scroll.jumpTo(_scroll.position.maxScrollExtent);
-      }
-    });
-  }
-
   Future<void> _copyAll(List<ScheduledReminder> scheduledList) async {
     final buffer = StringBuffer();
 
@@ -226,12 +218,6 @@ class _LogViewerPageState extends ConsumerState<LogViewerPage> {
             child: AdBanner(),
           ),
         ],
-      ),
-      floatingActionButton: FloatingActionButton.small(
-        heroTag: 'logs_bottom',
-        tooltip: 'Scroll to bottom',
-        onPressed: _scrollToEnd,
-        child: const Icon(Icons.arrow_downward_rounded),
       ),
     );
   }

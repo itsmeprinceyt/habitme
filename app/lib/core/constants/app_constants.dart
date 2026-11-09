@@ -20,5 +20,5 @@ abstract final class AppConstants {
   static const unityBannerId = 'BP_Banner_Android';
   static const unityInterstitialId = 'BP_Interstitial_Android';
   static const unityRewardedId = 'BP_Rewarded_Android';
-  static const unityTestMode = false;
+  static const unityTestMode = true;
 }
