@@ -83,6 +83,9 @@ class NotificationService {
   /// Receives the habit id stored in the notification payload.
   void Function(String habitId)? onDoneAction;
 
+  /// Called when a reminder fires or is interacted with.
+  void Function(String habitId, DateTime at)? onFired;
+
   Future<void> _tail = Future.value();
   bool _ready = false;
   bool _asked = false;
@@ -156,8 +159,12 @@ class NotificationService {
   }
 
   void _handleResponse(NotificationResponse response) {
-    if (response.actionId == doneActionId && response.payload != null) {
-      onDoneAction?.call(response.payload!);
+    if (response.payload != null) {
+      final habitId = response.payload!;
+      if (response.actionId == doneActionId) {
+        onDoneAction?.call(habitId);
+      }
+      onFired?.call(habitId, DateTime.now());
     }
   }
 
@@ -224,6 +231,39 @@ class NotificationService {
   /// Opens the system page where the user can allow exact alarms.
   Future<void> openExactAlarmSettings() async {
     await _android?.requestExactAlarmsPermission();
+  }
+
+  /// Schedules a single reminder without wiping or re-syncing the full queue.
+  Future<void> scheduleOne(ScheduledReminder reminder) {
+    final next = _tail.then((_) => _scheduleSingle(reminder));
+    _tail = next.catchError((_) {});
+    return next;
+  }
+
+  Future<void> _scheduleSingle(ScheduledReminder reminder) async {
+    await init();
+    final now = DateTime.now();
+    if (!reminder.at.isAfter(now)) return;
+
+    final mode = await _scheduleMode();
+    await _schedule(reminder, reminder.notificationId, mode);
+  }
+
+  /// Cancels a reminder by its stable key.
+  Future<void> cancelByKey(String key) {
+    final next = _tail.then((_) => _cancelSingle(key));
+    _tail = next.catchError((_) {});
+    return next;
+  }
+
+  Future<void> _cancelSingle(String key) async {
+    await init();
+    final id = stableNotificationId(key);
+    try {
+      await _guard(_plugin.cancel(id: id));
+    } catch (error) {
+      debugPrint('Cancelling notification $id failed: $error');
+    }
   }
 
   /// Replaces the reminders the OS should hold on to.
