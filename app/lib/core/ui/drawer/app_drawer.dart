@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:habit_me/core/constants/app_constants.dart';
 import 'package:habit_me/core/logic/providers.dart';
 import 'package:habit_me/core/theme/app_colors.dart';
+import 'package:habit_me/core/ui/drawer/guide_page.dart';
 import 'package:habit_me/core/ui/drawer/manage_labels_sheet.dart';
 import 'package:habit_me/core/ui/home/log_viewer_page.dart';
+import 'package:habit_me/data/services/ads_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class AppDrawer extends ConsumerWidget {
@@ -75,6 +77,22 @@ class AppDrawer extends ConsumerWidget {
       }
     }
 
+    Future<void> supportDeveloper() async {
+      navigator.pop();
+      final watched = await AdsService.instance.showRewarded();
+      messenger.showSnackBar(
+        SnackBar(
+          duration: const Duration(seconds: 5),
+          content: Text(
+            watched
+                ? 'Thank you for supporting the developer!'
+                : 'The ad was skipped or is not available right now. '
+                      'Please try again in a moment.',
+          ),
+        ),
+      );
+    }
+
     Future<void> openWebsite() async {
       final opened = await launchUrl(
         Uri.parse(AppConstants.madeByUrl),
@@ -101,6 +119,20 @@ class AppDrawer extends ConsumerWidget {
             const Divider(height: 1),
             const SizedBox(height: 8),
             ListTile(
+              leading: const Icon(Icons.menu_book_rounded),
+              title: const Text('Guide'),
+              subtitle: const Text(
+                'How to use HabitMe & app details',
+                style: TextStyle(color: AppColors.muted),
+              ),
+              onTap: () {
+                navigator.pop();
+                navigator.push(
+                  MaterialPageRoute(builder: (_) => const GuidePage()),
+                );
+              },
+            ),
+            ListTile(
               leading: const Icon(Icons.label_outline_rounded),
               title: const Text('Manage Labels'),
               subtitle: const Text(
@@ -116,9 +148,10 @@ class AppDrawer extends ConsumerWidget {
                 'Live app logs for debugging',
                 style: TextStyle(color: AppColors.muted),
               ),
-              onTap: () {
+              onTap: () async {
                 navigator.pop();
-                Navigator.of(context).push(
+                await AdsService.instance.showInterstitial();
+                navigator.push(
                   MaterialPageRoute(builder: (_) => const LogViewerPage()),
                 );
               },
@@ -140,6 +173,15 @@ class AppDrawer extends ConsumerWidget {
                 style: TextStyle(color: AppColors.muted),
               ),
               onTap: exportBackup,
+            ),
+            ListTile(
+              leading: const Icon(Icons.volunteer_activism_outlined),
+              title: const Text('Support developer'),
+              subtitle: const Text(
+                'Watch a short ad to support HabitMe',
+                style: TextStyle(color: AppColors.muted),
+              ),
+              onTap: supportDeveloper,
             ),
             const Spacer(),
             _MadeByCard(onTap: openWebsite),

@@ -7,6 +7,7 @@ import 'package:habit_me/app.dart';
 import 'package:habit_me/core/utils/app_log.dart';
 import 'package:habit_me/core/utils/expansion_preferences.dart';
 import 'package:habit_me/data/services/notification_service.dart';
+import 'package:habit_me/data/services/ads_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -31,5 +32,6 @@ Future<void> main() async {
   // first frame: the scheduler calls it again, in the background, whenever it
   // actually needs it.
   unawaited(NotificationService.instance.init().catchError((_) {}));
+  AdsService.instance.init();
   runApp(const ProviderScope(child: HabitApp()));
 }

@@ -9,6 +9,8 @@
     <!-- Restore scheduled notifications after reboot -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <application
         android:label="HabitMe"
         android:name="${applicationName}"

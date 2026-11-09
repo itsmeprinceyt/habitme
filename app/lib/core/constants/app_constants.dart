@@ -16,4 +16,9 @@ abstract final class AppConstants {
   static const tableHabits = 'habits';
   static const tableCompletions = 'completions';
   static const tableLabels = 'labels';
+  static const unityGameId = '800428292';
+  static const unityBannerId = 'BP_Banner_Android';
+  static const unityInterstitialId = 'BP_Interstitial_Android';
+  static const unityRewardedId = 'BP_Rewarded_Android';
+  static const unityTestMode = false;
 }

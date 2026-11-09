@@ -31,6 +31,13 @@ class HabitController extends AsyncNotifier<List<Habit>> {
     state = AsyncData(updated);
   }
 
+  /// Reconciles habits and ensures notifications are fully synchronized with the OS.
+  Future<void> reconcileAndSync() async {
+    await _scheduler.reconcileAndSync(DateTime.now());
+    final habits = await _repo.getAll();
+    state = AsyncData(habits);
+  }
+
   /// Rolls occurrences that have just become due forward so the countdown in
   /// the UI restarts on the next occurrence instead of sitting at zero.
   /// Cheap: it does nothing (no DB write, no rebuild) while nothing is due.

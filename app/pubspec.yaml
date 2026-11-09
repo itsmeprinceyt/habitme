@@ -25,6 +25,7 @@ dependencies:
   intl: ^0.20.3
   uuid: ^4.6.0
   url_launcher: ^6.3.1
+  unity_ads_plugin: ^0.6.0
 
 dev_dependencies:
   flutter_test:
