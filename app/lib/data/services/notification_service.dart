@@ -341,13 +341,14 @@ class NotificationService {
 
   Future<AndroidScheduleMode> _scheduleMode() async {
     final android = _android;
-    if (android == null) return AndroidScheduleMode.exactAllowWhileIdle;
+    if (android == null) return AndroidScheduleMode.alarmClock;
     final exact = await _guard(android.canScheduleExactNotifications()) ?? true;
     _exactAlarmsBlocked = !exact;
-    // Inexact alarms get batched by Doze, which is what makes reminders show
-    // up minutes late and all at once, so they are only used as a last resort.
+    // AndroidScheduleMode.alarmClock uses AlarmManager.setAlarmClock() which
+    // guarantees the system explicitly wakes up from deep Doze mode even after
+    // hours or overnight inactivity, bypassing while-idle throttling quotas.
     return exact
-        ? AndroidScheduleMode.exactAllowWhileIdle
+        ? AndroidScheduleMode.alarmClock
         : AndroidScheduleMode.inexactAllowWhileIdle;
   }
 

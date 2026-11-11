@@ -55,7 +55,7 @@
 
         <!-- Reschedule notifications after reboot or app update -->
         <receiver
-            android:exported="false"
+            android:exported="true"
             android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
 
             <intent-filter>
