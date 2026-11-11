@@ -5,6 +5,12 @@
 
     <!-- Android 12+: User-granted exact alarm access -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <!-- Android 13+: Automatic exact alarm permission for reminder/alarm apps -->
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+
+    <!-- Wake lock to ensure notifications show up even when screen is locked/sleeping -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.VIBRATE" />
 
     <!-- Restore scheduled notifications after reboot -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
@@ -49,7 +55,7 @@
 
         <!-- Reschedule notifications after reboot or app update -->
         <receiver
-            android:exported="false"
+            android:exported="true"
             android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
 
             <intent-filter>

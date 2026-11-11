@@ -43,7 +43,7 @@ class NotificationService {
 
   static final NotificationService instance = NotificationService._();
 
-  static const _channelId = 'habit_reminders';
+  static const _channelId = 'habit_reminders_v2';
   static const _channelName = 'Habit reminders';
   static const _channelDescription = 'Reminders to keep your habits on track';
   static const _categoryId = 'habit_reminder';
@@ -60,8 +60,10 @@ class NotificationService {
       _channelId,
       _channelName,
       channelDescription: _channelDescription,
-      importance: Importance.high,
-      priority: Priority.high,
+      importance: Importance.max,
+      priority: Priority.max,
+      visibility: NotificationVisibility.public,
+      category: AndroidNotificationCategory.reminder,
       icon: _smallIcon,
       largeIcon: DrawableResourceAndroidBitmap(_largeIcon),
       actions: [
@@ -146,12 +148,13 @@ class NotificationService {
           habitNotificationBackgroundHandler,
     );
 
+    await _android?.deleteNotificationChannel(channelId: 'habit_reminders');
     await _android?.createNotificationChannel(
       const AndroidNotificationChannel(
         _channelId,
         _channelName,
         description: _channelDescription,
-        importance: Importance.high,
+        importance: Importance.max,
       ),
     );
 
@@ -338,13 +341,14 @@ class NotificationService {
 
   Future<AndroidScheduleMode> _scheduleMode() async {
     final android = _android;
-    if (android == null) return AndroidScheduleMode.exactAllowWhileIdle;
+    if (android == null) return AndroidScheduleMode.alarmClock;
     final exact = await _guard(android.canScheduleExactNotifications()) ?? true;
     _exactAlarmsBlocked = !exact;
-    // Inexact alarms get batched by Doze, which is what makes reminders show
-    // up minutes late and all at once, so they are only used as a last resort.
+    // AndroidScheduleMode.alarmClock uses AlarmManager.setAlarmClock() which
+    // guarantees the system explicitly wakes up from deep Doze mode even after
+    // hours or overnight inactivity, bypassing while-idle throttling quotas.
     return exact
-        ? AndroidScheduleMode.exactAllowWhileIdle
+        ? AndroidScheduleMode.alarmClock
         : AndroidScheduleMode.inexactAllowWhileIdle;
   }
 
