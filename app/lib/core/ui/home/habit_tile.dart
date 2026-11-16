@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:habit_me/core/theme/app_colors.dart';
 import 'package:habit_me/core/ui/widgets/app_switch.dart';
 import 'package:habit_me/core/ui/widgets/countdown_text.dart';
-import 'package:habit_me/core/ui/widgets/gradient_border.dart';
 import 'package:habit_me/core/utils/date_utils.dart';
 import 'package:habit_me/core/utils/expansion_preferences.dart';
 import 'package:habit_me/data/models/habit.dart';
@@ -88,7 +87,6 @@ class _HabitTileState extends State<HabitTile> {
         backgroundColor: AppColors.card,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: AppColors.border),
         ),
         title: const Text('Delete habit?'),
         content: Text(
@@ -138,14 +136,12 @@ class _HabitTileState extends State<HabitTile> {
       direction: DismissDirection.endToStart,
       confirmDismiss: (_) => _confirm(context),
       onDismissed: (_) => widget.onDelete(),
-      background: Container(
+      background: const Align(
         alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 24),
-        decoration: BoxDecoration(
-          color: AppColors.surfaceLight,
-          borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: EdgeInsets.only(right: 24),
+          child: Icon(Icons.delete_outline_rounded, color: AppColors.muted),
         ),
-        child: const Icon(Icons.delete_outline_rounded, color: AppColors.muted),
       ),
       child: Material(
         color: Colors.transparent,
@@ -173,23 +169,15 @@ class _HabitTileState extends State<HabitTile> {
                   : null,
               color: label?.color != null ? null : AppColors.card,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: label?.color != null
-                    ? themeColor.withValues(alpha: _isExpanded ? 0.55 : 0.30)
-                    : (_isExpanded
-                          ? AppColors.white.withValues(alpha: 0.25)
-                          : AppColors.border),
-                width: _isExpanded ? 1.2 : 1.0,
-              ),
-              boxShadow: _isExpanded && label?.color != null
-                  ? [
-                      BoxShadow(
-                        color: themeColor.withValues(alpha: 0.08),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ]
-                  : null,
+              boxShadow: [
+                ...AppColors.raisedShadow,
+                if (_isExpanded && label?.color != null)
+                  BoxShadow(
+                    color: themeColor.withValues(alpha: 0.16),
+                    blurRadius: 14,
+                    offset: const Offset(0, 5),
+                  ),
+              ],
             ),
             padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
             child: Column(
@@ -217,11 +205,7 @@ class _HabitTileState extends State<HabitTile> {
                                 ],
                         ),
                         borderRadius: BorderRadius.circular(13),
-                        border: Border.all(
-                          color: themeColor.withValues(
-                            alpha: done ? 0.18 : 0.38,
-                          ),
-                        ),
+                        boxShadow: AppColors.raisedShadowSmall,
                       ),
                       child: Icon(
                         habit.isRecurring
@@ -272,13 +256,6 @@ class _HabitTileState extends State<HabitTile> {
                                             : AppColors.muted)
                                         .withValues(alpha: 0.14),
                                 borderRadius: BorderRadius.circular(6),
-                                border: Border.all(
-                                  color:
-                                      (label.color != null
-                                              ? Color(label.color!)
-                                              : AppColors.muted)
-                                          .withValues(alpha: 0.35),
-                                ),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
@@ -323,24 +300,12 @@ class _HabitTileState extends State<HabitTile> {
                   firstChild: const SizedBox(width: double.infinity),
                   secondChild: Padding(
                     padding: const EdgeInsets.only(top: 12),
-                    child: GradientBorder(
-                      radius: 14,
-                      padding: const EdgeInsets.all(1),
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: label?.color != null
-                            ? [
-                                themeColor.withValues(alpha: 0.5),
-                                AppColors.border,
-                                themeColor.withValues(alpha: 0.5),
-                              ]
-                            : const [
-                                AppColors.borderStrong,
-                                AppColors.border,
-                                AppColors.borderStrong,
-                              ],
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: AppColors.raisedShadowSmall,
                       ),
+                      clipBehavior: Clip.antiAlias,
                       child: Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(13),

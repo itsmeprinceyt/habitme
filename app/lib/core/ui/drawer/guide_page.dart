@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:habit_me/core/constants/app_constants.dart';
 import 'package:habit_me/core/theme/app_colors.dart';
 
 class GuidePage extends StatelessWidget {
@@ -18,8 +17,11 @@ class GuidePage extends StatelessWidget {
             _buildSectionCard(
               icon: Icons.lightbulb_outline_rounded,
               iconColor: AppColors.orange,
-              title: 'Motive Behind HabitMe',
-              content: 'It gets really busy to handle repetitive tasks every day, week, or month. HabitMe was created so you can easily track, organize, and automate reminders for everything in one clean place without missing a beat.',
+              title: 'Why HabitMe Exists',
+              content:
+                  'We repeat the same things day after day — and that is exactly how they become our habits.\n\n'
+                  'But the moment you take a break, that habit starts to distort. One skipped day turns into a skipped week, and things quietly slip out of your hands.\n\n'
+                  'HabitMe was built so you can create habits for yourself, stay consistent even after a pause, and remain obedient to your goals and your own betterment — without missing a beat.',
             ),
             const SizedBox(height: 16),
 
@@ -30,10 +32,10 @@ class GuidePage extends StatelessWidget {
               title: 'Creating a Habit',
               content:
                   'Tap the "+ New habit" button at the bottom of the home screen.\n\n'
-                  '1. Name: Enter what habit or task you want to perform.\n'
+                  '1. Name: Enter the habit or task you want to stay committed to.\n'
                   '2. Label (Optional): Organize your habits into custom color-coded groups.\n'
                   '3. Schedule Mode: Pick between Recurring or One-Time.\n'
-                  '4. Remind me: Toggle ON to get notifications on your device.',
+                  '4. Remind me: Toggle ON so the habit is brought back to you when it is due.',
             ),
             const SizedBox(height: 16),
 
@@ -64,18 +66,9 @@ class GuidePage extends StatelessWidget {
               title: 'Important Note on Notifications',
               content:
                   'To respect OS battery life and device limits (iOS/Android), the app automatically registers up to 60 of your nearest upcoming reminders into the system alarm manager in chronological order.\n\n'
-              'Simply open the app occasionally as you check off habits — opening the app automatically updates and rolls the next batch of 60 reminders forward so you never miss a notification!',
+                  'Simply open the app occasionally as you check off habits — opening the app automatically updates and rolls the next batch of 60 reminders forward so you never miss a notification!',
             ),
             const SizedBox(height: 24),
-
-            // Version info at bottom
-            Center(
-              child: Text(
-                '${AppConstants.appName} • ${AppConstants.appTagline}',
-                style: const TextStyle(color: AppColors.muted, fontSize: 12),
-              ),
-            ),
-            const SizedBox(height: 16),
           ],
         ),
       ),
@@ -93,7 +86,7 @@ class GuidePage extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.card,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
+        boxShadow: AppColors.raisedShadow,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -141,7 +134,14 @@ class GuidePage extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.card,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.orange.withValues(alpha: 0.4)),
+        boxShadow: [
+          ...AppColors.raisedShadow,
+          BoxShadow(
+            color: AppColors.orange.withValues(alpha: 0.12),
+            blurRadius: 16,
+            offset: const Offset(0, 5),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
