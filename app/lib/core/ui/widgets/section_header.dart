@@ -80,7 +80,7 @@ class SectionHeader extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: AppColors.surfaceLight,
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppColors.border),
+                  boxShadow: AppColors.raisedShadowSmall,
                 ),
                 child: const Icon(
                   Icons.keyboard_arrow_down_rounded,

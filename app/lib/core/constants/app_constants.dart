@@ -1,6 +1,6 @@
 abstract final class AppConstants {
   static const appName = 'HabitMe';
-  static const appTagline = 'Your day. Your habits.';
+  static const appTagline = 'Keep the habit alive.';
   static const logoAsset = 'assets/habitme_logo_rounded.png';
   static const madeByLabel = 'Made by';
   static const madeByName = 'ItsMe Prince';

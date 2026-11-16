@@ -152,7 +152,6 @@ class _HabitFormSheetState extends ConsumerState<HabitFormSheet> {
         backgroundColor: AppColors.surface,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: AppColors.border),
         ),
         title: const Text('Create New Label'),
         content: TextField(
@@ -295,7 +294,6 @@ class _HabitFormSheetState extends ConsumerState<HabitFormSheet> {
         backgroundColor: AppColors.card,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: AppColors.border),
         ),
         title: const Text('Delete habit?'),
         content: Text(
@@ -350,9 +348,10 @@ class _HabitFormSheetState extends ConsumerState<HabitFormSheet> {
         horizontal: isCompact ? 16 : 24,
         vertical: 24,
       ),
+      elevation: 24,
+      shadowColor: Colors.black,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
-        side: const BorderSide(color: AppColors.border, width: 1.2),
       ),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 480, maxHeight: 680),
@@ -364,10 +363,7 @@ class _HabitFormSheetState extends ConsumerState<HabitFormSheet> {
               // Header
               Container(
                 padding: const EdgeInsets.fromLTRB(20, 16, 12, 16),
-                decoration: const BoxDecoration(
-                  color: AppColors.card,
-                  border: Border(bottom: BorderSide(color: AppColors.border)),
-                ),
+                decoration: const BoxDecoration(color: AppColors.card),
                 child: Row(
                   children: [
                     Container(
@@ -462,15 +458,17 @@ class _HabitFormSheetState extends ConsumerState<HabitFormSheet> {
                             ),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(
-                                color: AppColors.border,
-                              ),
+                              borderSide: BorderSide.none,
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
                               borderSide: const BorderSide(
-                                color: AppColors.border,
-                                width: 1.5,
+                                color: AppColors.accentDeep,
+                                width: 1.4,
                               ),
                             ),
                           ),
@@ -654,7 +652,7 @@ class _HabitFormSheetState extends ConsumerState<HabitFormSheet> {
                           decoration: BoxDecoration(
                             color: AppColors.card,
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppColors.border),
+                            boxShadow: AppColors.raisedShadowSmall,
                           ),
                           child: Row(
                             children: [
@@ -721,10 +719,7 @@ class _HabitFormSheetState extends ConsumerState<HabitFormSheet> {
               // Footer Actions
               Container(
                 padding: const EdgeInsets.fromLTRB(20, 14, 20, 18),
-                decoration: const BoxDecoration(
-                  color: AppColors.card,
-                  border: Border(top: BorderSide(color: AppColors.border)),
-                ),
+                decoration: const BoxDecoration(color: AppColors.card),
                 child: Row(
                   children: [
                     if (_isEditing) ...[
@@ -823,10 +818,15 @@ class _HabitFormSheetState extends ConsumerState<HabitFormSheet> {
               ? (color ?? AppColors.accent).withValues(alpha: 0.14)
               : AppColors.card,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: isSelected ? (color ?? AppColors.accent) : AppColors.border,
-            width: isSelected ? 1.4 : 1.0,
-          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: (color ?? AppColors.accent).withValues(alpha: 0.28),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : AppColors.raisedShadowSmall,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -885,12 +885,15 @@ class _TypeSelectionCard extends StatelessWidget {
               ? AppColors.accent.withValues(alpha: 0.08)
               : AppColors.card,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isSelected
-                ? AppColors.accent.withValues(alpha: 0.55)
-                : AppColors.border,
-            width: isSelected ? 1.4 : 1.0,
-          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: AppColors.accent.withValues(alpha: 0.3),
+                    blurRadius: 14,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
+              : AppColors.raisedShadowSmall,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -950,7 +953,7 @@ class _DateTimeButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.card,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.border),
+          boxShadow: AppColors.raisedShadowSmall,
         ),
         child: Row(
           children: [

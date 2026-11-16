@@ -204,7 +204,7 @@ class _DrawerHeader extends StatelessWidget {
           Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.border),
+              boxShadow: AppColors.raisedShadowSmall,
             ),
             child: ClipRRect(
               child: Image.asset(
@@ -256,9 +256,10 @@ class _MadeByCard extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       child: Material(
         color: AppColors.black,
+        elevation: 4,
+        shadowColor: Colors.black,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: AppColors.border),
         ),
         clipBehavior: Clip.antiAlias,
         child: InkWell(

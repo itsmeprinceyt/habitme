@@ -13,7 +13,7 @@ abstract final class AppTheme {
       onSecondary: AppColors.black,
       surface: AppColors.surface,
       onSurface: AppColors.white,
-      outline: AppColors.border,
+      outline: AppColors.surfaceLight,
       error: AppColors.red,
     );
 
@@ -54,12 +54,12 @@ abstract final class AppTheme {
       ),
       cardTheme: CardThemeData(
         color: AppColors.card,
-        elevation: 0,
+        elevation: 4,
+        shadowColor: Colors.black,
         margin: EdgeInsets.zero,
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(18),
-          side: const BorderSide(color: AppColors.border),
         ),
       ),
       dividerTheme: const DividerThemeData(
@@ -91,13 +91,9 @@ abstract final class AppTheme {
         trackColor: WidgetStateProperty.resolveWith(
           (states) => states.contains(WidgetState.selected)
               ? AppColors.accent
-              : AppColors.borderStrong,
+              : AppColors.surfaceLight,
         ),
-        trackOutlineColor: WidgetStateProperty.resolveWith(
-          (states) => states.contains(WidgetState.selected)
-              ? AppColors.accent
-              : AppColors.borderStrong,
-        ),
+        trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
       ),
       snackBarTheme: SnackBarThemeData(
         backgroundColor: AppColors.surfaceLight,
@@ -108,7 +104,6 @@ abstract final class AppTheme {
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(14),
-          side: const BorderSide(color: AppColors.border),
         ),
       ),
       iconButtonTheme: IconButtonThemeData(
@@ -117,9 +112,10 @@ abstract final class AppTheme {
       dialogTheme: DialogThemeData(
         backgroundColor: AppColors.surface,
         surfaceTintColor: Colors.transparent,
+        elevation: 20,
+        shadowColor: Colors.black,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(22),
-          side: const BorderSide(color: AppColors.border),
         ),
       ),
       bottomSheetTheme: const BottomSheetThemeData(
@@ -141,7 +137,7 @@ abstract final class AppTheme {
         decoration: BoxDecoration(
           color: AppColors.surfaceLight,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppColors.border),
+          boxShadow: AppColors.raisedShadowSmall,
         ),
         textStyle: const TextStyle(
           color: AppColors.white,
@@ -169,11 +165,11 @@ abstract final class AppTheme {
         labelStyle: const TextStyle(color: AppColors.muted),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.border),
+          borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.border),
+          borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
@@ -191,7 +187,7 @@ abstract final class AppTheme {
               : Colors.transparent,
         ),
         checkColor: WidgetStateProperty.all(AppColors.black),
-        side: const BorderSide(color: AppColors.borderStrong, width: 1.6),
+        side: const BorderSide(color: AppColors.faint, width: 1.6),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
       ),
       sliderTheme: SliderThemeData(

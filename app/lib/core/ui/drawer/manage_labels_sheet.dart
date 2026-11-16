@@ -73,7 +73,6 @@ class _ManageLabelsSheetState extends ConsumerState<ManageLabelsSheet> {
           backgroundColor: AppColors.surface,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
-            side: const BorderSide(color: AppColors.border),
           ),
           title: const Text('Edit Label'),
           content: Column(
@@ -107,8 +106,13 @@ class _ManageLabelsSheetState extends ConsumerState<ManageLabelsSheet> {
                       decoration: BoxDecoration(
                         color: c,
                         shape: BoxShape.circle,
-                        border: isSel
-                            ? Border.all(color: AppColors.white, width: 2.5)
+                        boxShadow: isSel
+                            ? const [
+                                BoxShadow(
+                                  color: AppColors.white,
+                                  spreadRadius: 2,
+                                ),
+                              ]
                             : null,
                       ),
                     ),
@@ -153,7 +157,6 @@ class _ManageLabelsSheetState extends ConsumerState<ManageLabelsSheet> {
         backgroundColor: AppColors.card,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: AppColors.border),
         ),
         title: const Text('Delete label?'),
         content: Text(
@@ -191,9 +194,10 @@ class _ManageLabelsSheetState extends ConsumerState<ManageLabelsSheet> {
     return Dialog(
       backgroundColor: AppColors.surface,
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      elevation: 24,
+      shadowColor: Colors.black,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
-        side: const BorderSide(color: AppColors.border, width: 1.2),
       ),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 460, maxHeight: 600),
@@ -205,10 +209,7 @@ class _ManageLabelsSheetState extends ConsumerState<ManageLabelsSheet> {
               // Header
               Container(
                 padding: const EdgeInsets.fromLTRB(20, 16, 12, 16),
-                decoration: const BoxDecoration(
-                  color: AppColors.card,
-                  border: Border(bottom: BorderSide(color: AppColors.border)),
-                ),
+                decoration: const BoxDecoration(color: AppColors.card),
                 child: Row(
                   children: [
                     Container(
@@ -273,8 +274,17 @@ class _ManageLabelsSheetState extends ConsumerState<ManageLabelsSheet> {
                               ),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10),
+                                borderSide: BorderSide.none,
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide: BorderSide.none,
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
                                 borderSide: const BorderSide(
-                                  color: AppColors.border,
+                                  color: AppColors.accentDeep,
+                                  width: 1.4,
                                 ),
                               ),
                             ),
@@ -326,11 +336,13 @@ class _ManageLabelsSheetState extends ConsumerState<ManageLabelsSheet> {
                                       decoration: BoxDecoration(
                                         color: c,
                                         shape: BoxShape.circle,
-                                        border: isSel
-                                            ? Border.all(
-                                                color: AppColors.white,
-                                                width: 2,
-                                              )
+                                        boxShadow: isSel
+                                            ? const [
+                                                BoxShadow(
+                                                  color: AppColors.white,
+                                                  spreadRadius: 2,
+                                                ),
+                                              ]
                                             : null,
                                       ),
                                     ),
@@ -380,7 +392,7 @@ class _ManageLabelsSheetState extends ConsumerState<ManageLabelsSheet> {
                             decoration: BoxDecoration(
                               color: AppColors.card,
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: AppColors.border),
+                              boxShadow: AppColors.raisedShadowSmall,
                             ),
                             padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
                             child: Row(
