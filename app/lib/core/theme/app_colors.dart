@@ -24,6 +24,18 @@ abstract final class AppColors {
   static const orange = Color(0xFFD9A45B);
   static const red = Color(0xFFE0655F);
 
+  /// Soft drop shadow used for the raised surface look throughout the app.
+  static const List<BoxShadow> raisedShadow = [
+    BoxShadow(color: Color(0x73000000), blurRadius: 14, offset: Offset(0, 5)),
+    BoxShadow(color: Color(0x14FFFFFF), blurRadius: 3, offset: Offset(0, -1)),
+  ];
+
+  /// A softer, tighter shadow for small controls like chips and toggles.
+  static const List<BoxShadow> raisedShadowSmall = [
+    BoxShadow(color: Color(0x59000000), blurRadius: 8, offset: Offset(0, 3)),
+    BoxShadow(color: Color(0x0FFFFFFF), blurRadius: 2, offset: Offset(0, -1)),
+  ];
+
   /// Fresh green sheen used on primary surfaces (matches the app logo).
   static const accentGradient = LinearGradient(
     begin: Alignment.topLeft,

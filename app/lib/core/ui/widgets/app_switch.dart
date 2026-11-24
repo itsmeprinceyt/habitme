@@ -23,18 +23,15 @@ class AppSwitch extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           gradient: value ? AppColors.accentGradient : null,
           color: value ? null : AppColors.surfaceLight,
-          border: Border.all(
-            color: value ? Colors.transparent : AppColors.borderStrong,
-          ),
-          boxShadow: value
-              ? [
-                  BoxShadow(
-                    color: AppColors.accent.withValues(alpha: 0.25),
-                    blurRadius: 12,
-                    spreadRadius: -2,
-                  ),
-                ]
-              : null,
+          boxShadow: [
+            ...AppColors.raisedShadowSmall,
+            if (value)
+              BoxShadow(
+                color: AppColors.accent.withValues(alpha: 0.25),
+                blurRadius: 12,
+                spreadRadius: -2,
+              ),
+          ],
         ),
         child: AnimatedAlign(
           duration: const Duration(milliseconds: 280),

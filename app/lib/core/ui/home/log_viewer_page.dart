@@ -93,7 +93,7 @@ class _LogViewerPageState extends ConsumerState<LogViewerPage> {
               decoration: BoxDecoration(
                 color: AppColors.surfaceLight,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.border),
+                boxShadow: AppColors.raisedShadowSmall,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -107,11 +107,6 @@ class _LogViewerPageState extends ConsumerState<LogViewerPage> {
                       color: AppColors.card,
                       borderRadius: const BorderRadius.vertical(
                         top: Radius.circular(11),
-                      ),
-                      border: Border(
-                        bottom: BorderSide(
-                          color: AppColors.border.withValues(alpha: 0.5),
-                        ),
                       ),
                     ),
                     child: Row(
@@ -158,7 +153,7 @@ class _LogViewerPageState extends ConsumerState<LogViewerPage> {
               decoration: BoxDecoration(
                 color: AppColors.surfaceLight,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.border),
+                boxShadow: AppColors.raisedShadowSmall,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -172,11 +167,6 @@ class _LogViewerPageState extends ConsumerState<LogViewerPage> {
                       color: AppColors.card,
                       borderRadius: const BorderRadius.vertical(
                         top: Radius.circular(11),
-                      ),
-                      border: Border(
-                        bottom: BorderSide(
-                          color: AppColors.border.withValues(alpha: 0.5),
-                        ),
                       ),
                     ),
                     child: Row(
@@ -284,7 +274,7 @@ class _LogViewerPageState extends ConsumerState<LogViewerPage> {
                 decoration: BoxDecoration(
                   color: AppColors.card,
                   borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: AppColors.border),
+                  boxShadow: AppColors.raisedShadowSmall,
                 ),
                 child: Text(
                   number,
@@ -314,9 +304,6 @@ class _LogViewerPageState extends ConsumerState<LogViewerPage> {
                 decoration: BoxDecoration(
                   color: AppColors.card,
                   borderRadius: BorderRadius.circular(6),
-                  border: Border.all(
-                    color: AppColors.orange.withValues(alpha: 0.3),
-                  ),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,

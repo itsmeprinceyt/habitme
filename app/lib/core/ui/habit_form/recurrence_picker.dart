@@ -82,7 +82,7 @@ class _RecurrencePickerState extends State<RecurrencePicker> {
           decoration: BoxDecoration(
             color: AppColors.surfaceLight,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.border),
+            boxShadow: AppColors.raisedShadowSmall,
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -116,7 +116,11 @@ class _RecurrencePickerState extends State<RecurrencePicker> {
                     fillColor: AppColors.card,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: AppColors.border),
+                      borderSide: BorderSide.none,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide.none,
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
@@ -133,7 +137,7 @@ class _RecurrencePickerState extends State<RecurrencePicker> {
                   decoration: BoxDecoration(
                     color: AppColors.card,
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppColors.border),
+                    boxShadow: AppColors.raisedShadowSmall,
                   ),
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<RecurUnit>(
@@ -188,9 +192,15 @@ class _RecurrencePickerState extends State<RecurrencePicker> {
               ? AppColors.accent.withValues(alpha: 0.14)
               : AppColors.surfaceLight,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: isSelected ? AppColors.accent : AppColors.border,
-          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: AppColors.accent.withValues(alpha: 0.28),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : AppColors.raisedShadowSmall,
         ),
         child: Text(
           label,

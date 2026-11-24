@@ -39,6 +39,97 @@ class _CalendarViewState extends ConsumerState<CalendarView> {
     return allHabits.where((h) => _habitMatchesDate(h, day)).toList();
   }
 
+  /// Heat tint for a day tile: light green for a single habit, deeper green
+  /// as more unique habits fall on that day.
+  Color _heatColor(int count) {
+    if (count <= 0) return Colors.transparent;
+    // Wider ten-step ramp (1..10+ habits) so busy days stay distinguishable
+    // instead of flattening out after only a handful of tasks.
+    final level = (count / 10).clamp(0.0, 1.0);
+    final alpha = 0.14 + 0.64 * level;
+    return AppColors.accent.withValues(alpha: alpha);
+  }
+
+  /// A half-rounded square day cell whose fill is the day's habit heatmap.
+  Widget _heatDayCell({
+    required DateTime day,
+    required int count,
+    required bool isOutside,
+  }) {
+    final isSelected = isSameDay(day, _selectedDay);
+    final isToday = isSameDay(day, DateTime.now());
+
+    final heat = _heatColor(count);
+    final fill = isSelected
+        ? AppColors.accent.withValues(
+            alpha: count > 0 ? (heat.a + 0.14).clamp(0.3, 0.9) : 0.18,
+          )
+        : heat;
+    final tint = isOutside ? fill.withValues(alpha: fill.a * 0.5) : fill;
+
+    // Pick the number colour from the tile's effective (blended) brightness so
+    // the date never disappears, whether the square is empty or deep green.
+    final onTile =
+        ThemeData.estimateBrightnessForColor(
+              Color.alphaBlend(tint, AppColors.card),
+            ) ==
+            Brightness.dark
+        ? AppColors.white
+        : AppColors.black;
+    final textColor = isOutside ? AppColors.faint : onTile;
+
+    // Slight green glow on every filled tile, growing with the heat level.
+    final glow = count > 0
+        ? (0.14 + 0.045 * count).clamp(0.14, 0.5) * (isOutside ? 0.5 : 1.0)
+        : 0.0;
+
+    return Center(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
+        width: 34,
+        height: 34,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          color: tint,
+          boxShadow: [
+            if (glow > 0)
+              BoxShadow(
+                color: AppColors.accent.withValues(alpha: glow),
+                blurRadius: 10,
+                spreadRadius: 1,
+              ),
+            if (isToday)
+              BoxShadow(
+                color: AppColors.accent.withValues(alpha: 0.55),
+                blurRadius: 14,
+                spreadRadius: 1.5,
+              ),
+            if (isSelected)
+              BoxShadow(
+                color: AppColors.white.withValues(alpha: 0.55),
+                spreadRadius: 2,
+              ),
+          ],
+        ),
+        child: Text(
+          '${day.day}',
+          style: TextStyle(
+            color: textColor,
+            fontSize: 13,
+            fontWeight: isToday || isSelected
+                ? FontWeight.w700
+                : FontWeight.w500,
+            shadows: isOutside
+                ? null
+                : const [Shadow(color: Color(0x73000000), blurRadius: 3)],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final habitsAsync = ref.watch(habitControllerProvider);
@@ -67,7 +158,7 @@ class _CalendarViewState extends ConsumerState<CalendarView> {
           decoration: BoxDecoration(
             color: AppColors.card,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.border),
+            boxShadow: AppColors.raisedShadow,
           ),
           child: TableCalendar<Habit>(
             firstDay: DateTime.utc(AppConstants.calendarFirstYear, 1, 1),
@@ -113,75 +204,34 @@ class _CalendarViewState extends ConsumerState<CalendarView> {
             ),
             calendarStyle: CalendarStyle(
               outsideDaysVisible: true,
+              markersMaxCount: 0,
               defaultTextStyle: const TextStyle(color: AppColors.white),
               weekendTextStyle: const TextStyle(color: AppColors.white),
               outsideTextStyle: const TextStyle(color: AppColors.border),
-              todayTextStyle: const TextStyle(
-                color: AppColors.white,
-                fontWeight: FontWeight.w700,
-              ),
-              todayDecoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.surfaceLight,
-                border: Border.all(color: AppColors.border, width: 1.5),
-              ),
-              selectedTextStyle: const TextStyle(
-                color: AppColors.black,
-                fontWeight: FontWeight.w700,
-              ),
-              selectedDecoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: AppColors.accentGradient,
-              ),
             ),
+            // Date-wise heatmap: the more unique habits on a day, the
+            // deeper green its half-rounded square becomes.
             calendarBuilders: CalendarBuilders(
-              markerBuilder: (context, date, events) {
-                if (events.isEmpty) return const SizedBox.shrink();
-
-                // Extract colors for each habit: label color if present, else AppColors.muted (grey)
-                final colors = events
-                    .map((h) {
-                      final label = h.labelId != null
-                          ? labelMap[h.labelId]
-                          : null;
-                      return label?.color != null
-                          ? Color(label!.color!)
-                          : AppColors.muted;
-                    })
-                    .toSet()
-                    .toList();
-
-                return Positioned(
-                  bottom: 4,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (colors.length == 1) ...[
-                        Container(
-                          width: 5.5,
-                          height: 5.5,
-                          decoration: BoxDecoration(
-                            color: colors.first,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                      ] else ...[
-                        // Multi-color pill gradient of matching label colors
-                        Container(
-                          height: 5,
-                          width: 14,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(3),
-                            gradient: LinearGradient(
-                              colors: [colors[0], colors[1]],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                );
-              },
+              defaultBuilder: (context, day, focusedDay) => _heatDayCell(
+                day: day,
+                count: _habitsForDay(allHabits, day).length,
+                isOutside: false,
+              ),
+              todayBuilder: (context, day, focusedDay) => _heatDayCell(
+                day: day,
+                count: _habitsForDay(allHabits, day).length,
+                isOutside: false,
+              ),
+              selectedBuilder: (context, day, focusedDay) => _heatDayCell(
+                day: day,
+                count: _habitsForDay(allHabits, day).length,
+                isOutside: false,
+              ),
+              outsideBuilder: (context, day, focusedDay) => _heatDayCell(
+                day: day,
+                count: _habitsForDay(allHabits, day).length,
+                isOutside: true,
+              ),
             ),
           ),
         ),
@@ -228,7 +278,7 @@ class _CalendarViewState extends ConsumerState<CalendarView> {
           decoration: BoxDecoration(
             color: AppColors.card,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.border),
+            boxShadow: AppColors.raisedShadow,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -255,7 +305,6 @@ class _CalendarViewState extends ConsumerState<CalendarView> {
                     decoration: BoxDecoration(
                       color: AppColors.surfaceLight,
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: AppColors.border),
                     ),
                     child: Text(
                       '${selectedHabits.length} habits',
@@ -349,10 +398,15 @@ class _FilterChipButton extends StatelessWidget {
           gradient: isSelected ? AppColors.accentGradient : null,
           color: isSelected ? null : AppColors.card,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isSelected ? Colors.transparent : AppColors.border,
-            width: isSelected ? 1.4 : 1.0,
-          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: AppColors.accent.withValues(alpha: 0.3),
+                    blurRadius: 14,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
+              : AppColors.raisedShadowSmall,
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -449,7 +503,7 @@ class _DayHabitItem extends ConsumerWidget {
         decoration: BoxDecoration(
           color: AppColors.surfaceLight,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.border),
+          boxShadow: AppColors.raisedShadowSmall,
         ),
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
@@ -472,9 +526,6 @@ class _DayHabitItem extends ConsumerWidget {
                       ],
                     ),
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: themeColor.withValues(alpha: 0.4),
-                    ),
                   ),
                   child: Icon(
                     habit.isRecurring
