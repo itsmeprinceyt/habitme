@@ -1,51 +1,1249 @@
+"use client";
+
 import React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
   Menu,
   X,
-  Calendar as CalendarIcon,
-  List as ListIcon,
+  CalendarDays,
+  List,
   Plus,
-  Check,
   Download,
   Upload,
-  ExternalLink,
   Smartphone,
   Clock,
+  Repeat,
+  Flag,
+  Pencil,
+  Info,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  BookOpen,
+  Tags,
+  Bug,
+  Heart,
+  ArrowUpRight,
+  CheckCircle2,
+  Trash2,
+  BellRing,
+  BellOff,
+  CalendarClock,
+  Tag,
 } from "lucide-react";
+
+export type HabitType = "recurring" | "one-time";
 
 export interface MockHabit {
   id: string;
   name: string;
-  type: "recurring" | "one-time";
-  recurrenceLabel?: string;
+  type: HabitType;
+  recurrenceLabel: string;
   isDone: boolean;
-  dueText?: string;
+  labelId: string | null;
+  notify: boolean;
+  /** Local ISO timestamp used by the live countdown, e.g. 2026-11-24T07:00:00 */
+  dueAt?: string;
+  /** Pre-formatted target, mirrors the app's date formatting */
+  dueLabel?: string;
+  completedLabel?: string;
+  /** Day numbers of November 2026 this habit occurs on (calendar heatmap) */
+  days?: number[];
 }
+
+export interface NewHabitInput {
+  name: string;
+  type: HabitType;
+  labelId: string | null;
+  recurrenceLabel: string;
+  notify: boolean;
+}
+
+export interface MockLabel {
+  id: string;
+  name: string;
+  color: string;
+}
+
+/** The label palette from the app's drawer → Manage Labels sheet. */
+export const DEMO_LABELS: MockLabel[] = [
+  { id: "health", name: "Health", color: "#2BD673" },
+  { id: "mind", name: "Mind", color: "#86B49A" },
+  { id: "work", name: "Work", color: "#D9A45B" },
+];
+
+const C = {
+  black: "#0A0E0B",
+  surface: "#141B16",
+  surfaceLight: "#1F2922",
+  card: "#1A231D",
+  border: "#2E3B32",
+  borderStrong: "#3E4D42",
+  white: "#EDF3EC",
+  muted: "#8E9C90",
+  faint: "#5F6E63",
+  accent: "#2BD673",
+  accentDeep: "#16A34A",
+  green: "#86B49A",
+  orange: "#D9A45B",
+  red: "#E0655F",
+};
+
+const themeVars = {
+  "--hm-black": C.black,
+  "--hm-surface": C.surface,
+  "--hm-surface-light": C.surfaceLight,
+  "--hm-card": C.card,
+  "--hm-border": C.border,
+  "--hm-border-strong": C.borderStrong,
+  "--hm-white": C.white,
+  "--hm-muted": C.muted,
+  "--hm-faint": C.faint,
+  "--hm-accent": C.accent,
+  "--hm-accent-deep": C.accentDeep,
+  "--hm-green": C.green,
+  "--hm-orange": C.orange,
+  "--hm-red": C.red,
+  fontFamily: 'Roboto, "Helvetica Neue", Arial, Helvetica, sans-serif',
+} as React.CSSProperties;
+
+const RAISED_SHADOW = "0 5px 14px rgba(0,0,0,0.45), 0 -1px 3px rgba(255,255,255,0.08)";
+const RAISED_SHADOW_SMALL = "0 3px 8px rgba(0,0,0,0.35), 0 -1px 2px rgba(255,255,255,0.06)";
+
+/* ------------------------------------------------------------------ */
+/* Helpers                                                             */
+/* ------------------------------------------------------------------ */
+
+function tint(color: string, percent: number) {
+  return `color-mix(in srgb, ${color} ${percent}%, ${C.card})`;
+}
+
+function hexToRgb(hex: string): [number, number, number] {
+  const value = hex.replace("#", "");
+  return [
+    parseInt(value.slice(0, 2), 16),
+    parseInt(value.slice(2, 4), 16),
+    parseInt(value.slice(4, 6), 16),
+  ];
+}
+
+/** Blend an accent over the card colour and report whether the result is light. */
+function isLightFill(accent: string, alpha: number) {
+  const [ar, ag, ab] = hexToRgb(accent);
+  const [br, bg, bb] = hexToRgb(C.card);
+  const channels = [ar, ag, ab].map((channel, index) => {
+    const base = [br, bg, bb][index];
+    return channel * alpha + base * (1 - alpha);
+  });
+  const [r, g, b] = channels.map((value) => value / 255);
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.42;
+}
+
+/** Mirrors DurationFormat.formatCountdown: leading zero units are dropped. */
+function formatCountdown(target: number, now: number) {
+  const diff = target - now;
+  const overdue = diff < 0;
+  const ms = Math.abs(diff);
+
+  const days = Math.floor(ms / 86_400_000);
+  const hours = Math.floor((ms % 86_400_000) / 3_600_000);
+  const minutes = Math.floor((ms % 3_600_000) / 60_000);
+  const seconds = Math.floor((ms % 60_000) / 1000);
+
+  const parts: string[] = [];
+  let started = false;
+  for (const [value, suffix] of [
+    [days, "d"],
+    [hours, "h"],
+    [minutes, "m"],
+    [seconds, "s"],
+  ] as const) {
+    if (value > 0) started = true;
+    if (started) parts.push(`${value}${suffix}`);
+  }
+
+  if (parts.length === 0) return overdue ? "Overdue" : "Due now";
+  return overdue ? `Overdue by ${parts.join(" ")}` : parts.join(" ");
+}
+
+function useTick(enabled: boolean) {
+  const [now, setNow] = React.useState<number | null>(null);
+
+  React.useEffect(() => {
+    if (!enabled) {
+      setNow(null);
+      return;
+    }
+    setNow(Date.now());
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [enabled]);
+
+  return now;
+}
+
+function labelFor(labels: MockLabel[], id: string | null) {
+  if (!id) return null;
+  return labels.find((label) => label.id === id) ?? null;
+}
+
+/* ------------------------------------------------------------------ */
+/* Shared controls                                                     */
+/* ------------------------------------------------------------------ */
+
+function AppSwitch({
+  value,
+  onChange,
+  label,
+}: {
+  value: boolean;
+  onChange: () => void;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={value}
+      aria-label={label}
+      onClick={(event) => {
+        event.stopPropagation();
+        onChange();
+      }}
+      className={`relative h-[27px] w-[46px] shrink-0 rounded-full p-[3px] transition-all duration-300 cursor-pointer ${
+        value
+          ? "bg-gradient-to-br from-[#43D17C] to-[#128A44] shadow-[0_0_12px_-2px_rgba(43,214,115,0.55)]"
+          : "bg-[var(--hm-surface-light)] shadow-[0_3px_8px_rgba(0,0,0,0.35)]"
+      }`}
+    >
+      <span
+        className={`block h-[21px] w-[21px] rounded-full transition-transform duration-300 ease-out ${
+          value
+            ? "translate-x-[19px] bg-[var(--hm-black)]"
+            : "translate-x-0 bg-[var(--hm-muted)]"
+        }`}
+        style={{ boxShadow: "0 2px 4px rgba(0,0,0,0.4)" }}
+      />
+    </button>
+  );
+}
+
+function SectionHeader({
+  title,
+  count,
+  accent,
+  expanded,
+  onToggle,
+}: {
+  title: string;
+  count: number;
+  accent: string;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className="flex w-full items-center gap-2.5 py-2 text-left cursor-pointer"
+    >
+      <span
+        className="h-4 w-1 rounded-full"
+        style={{ backgroundColor: accent }}
+      />
+      <span className="flex flex-1 items-center gap-2.5">
+        <span className="text-[13px] font-bold tracking-[1.4px] text-[var(--hm-white)]">
+          {title.toUpperCase()}
+        </span>
+        <span
+          className="rounded-[10px] px-2 py-0.5 text-xs font-bold"
+          style={{ backgroundColor: `${accent}29`, color: accent }}
+        >
+          {count}
+        </span>
+      </span>
+      <span
+        className="rounded-lg bg-[var(--hm-surface-light)] p-1"
+        style={{ boxShadow: RAISED_SHADOW_SMALL }}
+      >
+        <ChevronDown
+          className={`h-[18px] w-[18px] text-[var(--hm-muted)] transition-transform duration-200 ${
+            expanded ? "rotate-180" : ""
+          }`}
+        />
+      </span>
+    </button>
+  );
+}
+
+function LabelSubheader({
+  label,
+  count,
+  expanded,
+  onToggle,
+}: {
+  label: MockLabel | null;
+  count: number;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  const color = label?.color ?? C.muted;
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className="flex w-full items-center gap-2 px-1 py-2 text-left cursor-pointer"
+    >
+      <span
+        className="h-2 w-2 shrink-0 rounded-full"
+        style={{ backgroundColor: color }}
+      />
+      <span
+        className={`text-[13px] font-semibold tracking-[0.2px] ${
+          label ? "text-[var(--hm-white)]" : "text-[var(--hm-muted)]"
+        }`}
+      >
+        {label?.name ?? "No Label"}
+      </span>
+      <span
+        className="rounded-lg px-1.5 py-[1px] text-[11px] font-bold"
+        style={{ backgroundColor: `${color}26`, color }}
+      >
+        {count}
+      </span>
+      <span className="flex-1" />
+      <ChevronDown
+        className={`h-[17px] w-[17px] text-[var(--hm-muted)] transition-transform duration-200 ${
+          expanded ? "rotate-180" : ""
+        }`}
+      />
+    </button>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Habit tile                                                          */
+/* ------------------------------------------------------------------ */
+
+function HabitTile({
+  habit,
+  label,
+  onToggle,
+  onEdit,
+}: {
+  habit: MockHabit;
+  label: MockLabel | null;
+  onToggle: () => void;
+  onEdit: () => void;
+}) {
+  const [expanded, setExpanded] = React.useState(false);
+  const now = useTick(expanded);
+
+  const themeColor = label?.color ?? C.accentDeep;
+  const done = habit.isDone;
+  const strike = done && habit.type === "one-time";
+  const target = habit.dueAt ? new Date(habit.dueAt).getTime() : null;
+  const countdown = now !== null && target !== null ? formatCountdown(target, now) : null;
+  const countdownOverdue = countdown?.startsWith("Overdue") ?? false;
+
+  return (
+    <div
+      onClick={() => setExpanded((value) => !value)}
+      className="cursor-pointer rounded-2xl p-[14px_10px_12px_14px] transition-colors duration-200"
+      style={{
+        backgroundImage: label
+          ? `linear-gradient(90deg, ${tint(themeColor, 16)} 0%, ${tint(
+              themeColor,
+              16,
+            )} 60%, ${tint(themeColor, 6)} 84%, ${C.card} 100%)`
+          : undefined,
+        backgroundColor: label ? undefined : C.card,
+        boxShadow: RAISED_SHADOW,
+      }}
+    >
+      <div className="flex items-center gap-3">
+        <span
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[13px]"
+          style={{
+            backgroundImage: done
+              ? `linear-gradient(135deg, ${C.surfaceLight}, ${C.surface})`
+              : `linear-gradient(135deg, ${themeColor}4d, ${themeColor}1a)`,
+            boxShadow: RAISED_SHADOW_SMALL,
+          }}
+        >
+          {habit.type === "recurring" ? (
+            <Repeat
+              className="h-5 w-5"
+              style={{ color: done ? C.muted : themeColor }}
+            />
+          ) : (
+            <Flag
+              className="h-5 w-5"
+              style={{ color: done ? C.muted : themeColor }}
+            />
+          )}
+        </span>
+
+        <div className="min-w-0 flex-1">
+          <div
+            className="truncate text-[16px] font-semibold leading-tight"
+            style={{
+              color: done ? C.muted : C.white,
+              textDecoration: strike ? "line-through" : undefined,
+              textDecorationColor: C.muted,
+            }}
+          >
+            {habit.name}
+          </div>
+          <div className="mt-[3px] truncate text-[12.5px] leading-tight text-[var(--hm-white)]">
+            {habit.recurrenceLabel}
+          </div>
+          {label && (
+            <span
+              className="mt-[5px] inline-flex items-center gap-1 rounded-md px-[7px] py-0.5 text-[11px] font-semibold"
+              style={{ backgroundColor: `${label.color}24`, color: label.color }}
+            >
+              <Tag className="h-[11px] w-[11px]" />
+              {label.name}
+            </span>
+          )}
+        </div>
+
+        <button
+          type="button"
+          title="Edit habit"
+          aria-label={`Edit ${habit.name}`}
+          onClick={(event) => {
+            event.stopPropagation();
+            onEdit();
+          }}
+          className="rounded-lg p-1.5 text-[var(--hm-white)] transition-colors hover:bg-white/5 cursor-pointer"
+        >
+          <Pencil className="h-[19px] w-[19px]" />
+        </button>
+
+        <AppSwitch value={done} onChange={onToggle} label={`Complete ${habit.name}`} />
+      </div>
+
+      {expanded && (
+        <div className="mt-3">
+          <div className="rounded-[14px] p-[1px]" style={{ backgroundImage: `linear-gradient(160deg, ${C.borderStrong}, ${C.border} 55%, transparent)` }}>
+            <div
+              className="rounded-[13px] p-[13px]"
+              style={{
+                backgroundImage: label
+                  ? `linear-gradient(180deg, ${tint(themeColor, 14).replace(
+                      C.card,
+                      "#1B2620",
+                    )}, #141C17)`
+                  : `linear-gradient(180deg, #1B2620, #141C17)`,
+              }}
+            >
+              {label && (
+                <div className="mb-2 flex items-center gap-1.5">
+                  <Tag className="h-[15px] w-[15px]" style={{ color: label.color }} />
+                  <span className="text-xs font-semibold text-[var(--hm-muted)]">Label:</span>
+                  <span
+                    className="truncate text-[12.5px] font-bold"
+                    style={{ color: label.color }}
+                  >
+                    {label.name}
+                  </span>
+                </div>
+              )}
+
+              {habit.dueLabel && !(done && habit.type === "one-time") ? (
+                <>
+                  <div className="flex items-center gap-1.5">
+                    <CalendarClock className="h-[15px] w-[15px]" style={{ color: themeColor }} />
+                    <span className="text-xs font-semibold text-[var(--hm-muted)]">
+                      {habit.type === "recurring"
+                        ? done
+                          ? "Next occurrence:"
+                          : "Due date:"
+                        : "Scheduled date:"}
+                    </span>
+                    <span className="truncate text-[12.5px] font-semibold text-[var(--hm-white)]">
+                      {habit.dueLabel}
+                    </span>
+                  </div>
+
+                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                    <span className="flex items-center gap-1.5">
+                      <Clock className="h-[15px] w-[15px]" style={{ color: themeColor }} />
+                      <span className="text-xs font-semibold text-[var(--hm-muted)]">Countdown:</span>
+                    </span>
+                    <span
+                      className="text-[12.5px] font-bold tabular-nums"
+                      style={{ color: countdownOverdue ? C.orange : C.accent }}
+                    >
+                      {countdown ?? "…"}
+                    </span>
+                  </div>
+                </>
+              ) : done && habit.completedLabel ? (
+                <div className="flex items-center gap-1.5">
+                  <CheckCircle2 className="h-[15px] w-[15px]" style={{ color: C.green }} />
+                  <span className="text-xs font-semibold text-[var(--hm-muted)]">Completed at:</span>
+                  <span className="truncate text-[12.5px] font-semibold text-[var(--hm-white)]">
+                    {habit.completedLabel}
+                  </span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5">
+                  <Info className="h-[15px] w-[15px] text-[var(--hm-muted)]" />
+                  <span className="text-xs text-[var(--hm-muted)]">No specific target time set</span>
+                </div>
+              )}
+
+              {habit.notify && (
+                <div className="mt-2 flex items-center gap-1.5">
+                  <BellRing className="h-3.5 w-3.5" style={{ color: C.green }} />
+                  <span className="text-[11.5px] font-medium" style={{ color: C.green }}>
+                    Notifications enabled for this habit
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Calendar view                                                       */
+/* ------------------------------------------------------------------ */
+
+const MONTH_TITLE = "November 2026";
+const FIRST_WEEKDAY_INDEX = 6; // Monday-start offset for 1 Nov 2026 (Sunday)
+const DAYS_IN_MONTH = 30;
+const TODAY = 24;
+
+function HeatDay({
+  day,
+  count,
+  selected,
+  isToday,
+  onClick,
+}: {
+  day: number;
+  count: number;
+  selected: boolean;
+  isToday: boolean;
+  onClick: () => void;
+}) {
+  const level = Math.min(count / 10, 1);
+  const baseAlpha = count > 0 ? 0.14 + 0.64 * level : 0;
+  const alpha = selected
+    ? count > 0
+      ? Math.min(Math.max(baseAlpha + 0.14, 0.3), 0.9)
+      : 0.18
+    : baseAlpha;
+  const fill = count > 0 || selected ? `rgba(43,214,115,${alpha})` : "transparent";
+  const light = alpha > 0 && isLightFill(C.accent, alpha);
+  const glow = count > 0 ? Math.min(0.14 + 0.045 * count, 0.5) : 0;
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="mx-auto flex h-[34px] w-[34px] items-center justify-center rounded-[10px] transition-all duration-200 cursor-pointer"
+      style={{
+        backgroundColor: fill,
+        boxShadow: [
+          glow > 0 ? `0 0 10px 1px rgba(43,214,115,${glow})` : null,
+          isToday ? "0 0 14px 1.5px rgba(43,214,115,0.55)" : null,
+          selected ? "0 0 0 2px rgba(237,243,236,0.55)" : null,
+        ]
+          .filter(Boolean)
+          .join(", ") || undefined,
+      }}
+      aria-pressed={selected}
+    >
+      <span
+        className="text-[13px]"
+        style={{
+          color: light ? C.black : C.white,
+          fontWeight: isToday || selected ? 700 : 500,
+          textShadow: light ? undefined : "0 1px 3px rgba(0,0,0,0.45)",
+        }}
+      >
+        {day}
+      </span>
+    </button>
+  );
+}
+
+function CalendarView({
+  habits,
+  labels,
+  onToggleHabit,
+  onEditHabit,
+}: {
+  habits: MockHabit[];
+  labels: MockLabel[];
+  onToggleHabit: (id: string) => void;
+  onEditHabit: (habit: MockHabit) => void;
+}) {
+  const [selectedDay, setSelectedDay] = React.useState(TODAY);
+  const [showOneTime, setShowOneTime] = React.useState(true);
+  const [showRecurring, setShowRecurring] = React.useState(true);
+
+  const visible = habits.filter((habit) =>
+    habit.type === "recurring" ? showRecurring : showOneTime,
+  );
+  const countFor = (day: number) =>
+    visible.filter((habit) => habit.days?.includes(day)).length;
+
+  const selectedHabits = visible.filter((habit) => habit.days?.includes(selectedDay));
+  const recurring = selectedHabits.filter((habit) => habit.type === "recurring");
+  const oneTime = selectedHabits.filter((habit) => habit.type === "one-time");
+
+  const monthName = new Intl.DateTimeFormat("en-GB", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(new Date(2026, 10, selectedDay));
+
+  const cells: (number | null)[] = [
+    ...Array.from({ length: FIRST_WEEKDAY_INDEX }, () => null),
+    ...Array.from({ length: DAYS_IN_MONTH }, (_, index) => index + 1),
+  ];
+  while (cells.length % 7 !== 0) cells.push(null);
+
+  const dayList = (
+    list: MockHabit[],
+    title: string,
+    accent: string,
+  ) =>
+    list.length > 0 && (
+      <div className="mb-2.5">
+        <div className="mb-2 flex items-center gap-1.5">
+          <span className="h-3 w-[3px] rounded-full" style={{ backgroundColor: accent }} />
+          <span className="text-xs font-bold text-[var(--hm-white)]">{title}</span>
+        </div>
+        <div className="space-y-2">
+          {list.map((habit) => {
+            const label = labelFor(labels, habit.labelId);
+            const color = label?.color ?? C.accentDeep;
+            return (
+              <div
+                key={habit.id}
+                className="flex items-center gap-2.5 rounded-xl px-2.5 py-2"
+                style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}
+              >
+                <span
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg"
+                  style={{ backgroundColor: `${color}26` }}
+                >
+                  {habit.type === "recurring" ? (
+                    <Repeat className="h-3.5 w-3.5" style={{ color }} />
+                  ) : (
+                    <Flag className="h-3.5 w-3.5" style={{ color }} />
+                  )}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div
+                    className="truncate text-[11.5px] font-semibold"
+                    style={{ color: habit.isDone ? C.muted : C.white }}
+                  >
+                    {habit.name}
+                  </div>
+                  <div className="truncate text-[10px] text-[var(--hm-muted)]">
+                    {label?.name ?? "No Label"} · {habit.recurrenceLabel}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  aria-label={`Toggle ${habit.name}`}
+                  onClick={() => onToggleHabit(habit.id)}
+                  className="rounded-md p-0.5 cursor-pointer"
+                >
+                  <CheckCircle2
+                    className="h-[18px] w-[18px]"
+                    style={{ color: habit.isDone ? C.accent : C.faint }}
+                  />
+                </button>
+                <button
+                  type="button"
+                  aria-label={`Edit ${habit.name}`}
+                  onClick={() => onEditHabit(habit)}
+                  className="rounded-md p-0.5 text-[var(--hm-muted)] cursor-pointer"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+
+  return (
+    <div className="space-y-3 pt-1">
+      <div className="rounded-2xl py-2" style={{ backgroundColor: C.card, boxShadow: RAISED_SHADOW }}>
+        <div className="flex items-center justify-between px-3 py-1">
+          <button
+            type="button"
+            aria-label="Previous month"
+            className="rounded-lg p-1 text-[var(--hm-white)] hover:bg-white/5 cursor-pointer"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <span className="text-[16px] font-bold text-[var(--hm-white)]">{MONTH_TITLE}</span>
+          <button
+            type="button"
+            aria-label="Next month"
+            className="rounded-lg p-1 text-[var(--hm-white)] hover:bg-white/5 cursor-pointer"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-7 px-2 pt-1">
+          {["M", "T", "W", "T", "F", "S", "S"].map((day, index) => (
+            <span
+              key={`${day}-${index}`}
+              className="py-1 text-center text-xs font-semibold text-[var(--hm-muted)]"
+            >
+              {day}
+            </span>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-7 gap-y-1 px-2 pb-1">
+          {cells.map((day, index) =>
+            day === null ? (
+              <span key={`blank-${index}`} />
+            ) : (
+              <HeatDay
+                key={day}
+                day={day}
+                count={countFor(day)}
+                selected={day === selectedDay}
+                isToday={day === TODAY}
+                onClick={() => setSelectedDay(day)}
+              />
+            ),
+          )}
+        </div>
+      </div>
+
+      <div className="flex gap-2.5">
+        {[
+          { label: "One-Time", icon: Flag, active: showOneTime, toggle: () => setShowOneTime((v) => !v) },
+          { label: "Recurring", icon: Repeat, active: showRecurring, toggle: () => setShowRecurring((v) => !v) },
+        ].map(({ label, icon: Icon, active, toggle }) => (
+          <button
+            key={label}
+            type="button"
+            onClick={toggle}
+            aria-pressed={active}
+            className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl px-2.5 py-2.5 text-[13px] transition-all duration-200 cursor-pointer ${
+              active
+                ? "bg-gradient-to-br from-[#43D17C] to-[#128A44] font-bold text-[#0A0E0B] shadow-[0_4px_14px_rgba(43,214,115,0.3)]"
+                : "font-medium text-[var(--hm-muted)]"
+            }`}
+            style={active ? undefined : { backgroundColor: C.card, boxShadow: RAISED_SHADOW_SMALL }}
+          >
+            <Icon className="h-4 w-4" />
+            <span className="truncate">{label}</span>
+            {active ? (
+              <CheckCircle2 className="h-3.5 w-3.5" />
+            ) : (
+              <span className="h-3.5 w-3.5 rounded-full border border-current" />
+            )}
+          </button>
+        ))}
+      </div>
+
+      <div className="rounded-2xl p-4" style={{ backgroundColor: C.card, boxShadow: RAISED_SHADOW }}>
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <span className="text-[13px] font-bold leading-tight text-[var(--hm-white)]">
+            {monthName}
+          </span>
+          <span
+            className="shrink-0 rounded-[10px] px-2 py-[3px] text-[11.5px] font-semibold text-[var(--hm-muted)]"
+            style={{ backgroundColor: C.surfaceLight }}
+          >
+            {selectedHabits.length} habits
+          </span>
+        </div>
+
+        {selectedHabits.length === 0 ? (
+          <p className="py-3 text-center text-[13px] leading-relaxed text-[var(--hm-muted)]">
+            {!showOneTime && !showRecurring
+              ? "Both filters are off. Turn on One-Time or Recurring above."
+              : "No scheduled habits on this day."}
+          </p>
+        ) : (
+          <>
+            {dayList(recurring, "Recurring Habits", C.accent)}
+            {dayList(oneTime, "One-Time Habits", C.orange)}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Habit form (centre dialog, like the Flutter app)                    */
+/* ------------------------------------------------------------------ */
+
+const PRESETS = [
+  { label: "Daily", interval: 1, unit: "days" as const },
+  { label: "Weekly", interval: 7, unit: "days" as const },
+  { label: "Monthly", interval: 1, unit: "months" as const },
+  { label: "Every 2 days", interval: 2, unit: "days" as const },
+  { label: "Hourly", interval: 1, unit: "hours" as const },
+];
+
+function recurrenceText(interval: number, unit: "days" | "hours" | "months") {
+  const singular = unit.slice(0, -1);
+  return `Every ${interval} ${interval === 1 ? singular : unit}`;
+}
+
+function HabitForm({
+  habit,
+  onClose,
+  onSave,
+  onDelete,
+}: {
+  habit: MockHabit | null;
+  onClose: () => void;
+  onSave: (input: NewHabitInput) => void;
+  onDelete: () => void;
+}) {
+  const [name, setName] = React.useState(habit?.name ?? "");
+  const [labelId, setLabelId] = React.useState<string | null>(habit?.labelId ?? null);
+  const [isRecurring, setIsRecurring] = React.useState(habit ? habit.type === "recurring" : true);
+  const [interval, setIntervalValue] = React.useState(1);
+  const [unit, setUnit] = React.useState<"days" | "hours" | "months">("days");
+  const [preset, setPreset] = React.useState("Daily");
+  const [notify, setNotify] = React.useState(habit?.notify ?? true);
+  const [error, setError] = React.useState("");
+
+  const applyPreset = (next: (typeof PRESETS)[number]) => {
+    setPreset(next.label);
+    setIntervalValue(next.interval);
+    setUnit(next.unit);
+  };
+
+  const save = () => {
+    const trimmed = name.trim();
+    if (!trimmed) {
+      setError("Please name your habit");
+      return;
+    }
+    onSave({
+      name: trimmed,
+      type: isRecurring ? "recurring" : "one-time",
+      labelId,
+      recurrenceLabel: isRecurring ? recurrenceText(interval, unit) : "One-time habit",
+      notify,
+    });
+  };
+
+  return (
+    <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-[2px]">
+      <div
+        className="flex max-h-[94%] w-full max-w-[320px] flex-col overflow-hidden rounded-[22px] border"
+        style={{ backgroundColor: C.surface, borderColor: C.border }}
+      >
+        <div className="flex items-center gap-3 border-b px-4 py-3" style={{ borderColor: C.border }}>
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#43D17C] to-[#128A44]">
+            <Plus className="h-5 w-5 stroke-[3] text-[#0A0E0B]" />
+          </span>
+          <span className="flex-1 text-[15px] font-bold text-[var(--hm-white)]">
+            {habit ? "Edit Habit" : "Create New Habit"}
+          </span>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="rounded-lg p-1.5 text-[var(--hm-muted)] hover:text-[var(--hm-white)] cursor-pointer"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="flex-1 space-y-3 overflow-y-auto px-4 py-3">
+          <div>
+            <label className="text-[10px] font-bold tracking-[1.1px] text-[var(--hm-muted)]">
+              HABIT TITLE
+            </label>
+            <input
+              value={name}
+              onChange={(event) => {
+                setName(event.target.value);
+                setError("");
+              }}
+              placeholder="e.g. Drink 2L water, Morning run"
+              className="mt-2 w-full rounded-xl px-3.5 py-2.5 text-[13.5px] text-[var(--hm-white)] placeholder:text-[var(--hm-muted)] focus:outline-none"
+              style={{
+                backgroundColor: C.card,
+                border: `1px solid ${error ? C.orange : "transparent"}`,
+              }}
+            />
+            {error && <p className="mt-1 text-[11px]" style={{ color: C.orange }}>{error}</p>}
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold tracking-[1.1px] text-[var(--hm-muted)]">
+                LABEL / GROUP
+              </span>
+              <span className="flex items-center gap-1 text-[11px] font-bold text-[var(--hm-white)]">
+                <Plus className="h-3 w-3" /> New Label
+              </span>
+            </div>
+            <div className="mt-2 flex gap-1.5 overflow-x-auto pb-1">
+              <button
+                type="button"
+                onClick={() => setLabelId(null)}
+                className="shrink-0 rounded-lg px-2.5 py-1.5 text-[11.5px]"
+                style={{
+                  backgroundColor: labelId === null ? `${C.accent}24` : C.card,
+                  color: labelId === null ? C.accent : C.muted,
+                  fontWeight: labelId === null ? 700 : 500,
+                  boxShadow: labelId === null ? `0 2px 8px ${C.accent}47` : RAISED_SHADOW_SMALL,
+                }}
+              >
+                None
+              </button>
+              {DEMO_LABELS.map((label) => {
+                const active = labelId === label.id;
+                return (
+                  <button
+                    key={label.id}
+                    type="button"
+                    onClick={() => setLabelId(label.id)}
+                    className="flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11.5px]"
+                    style={{
+                      backgroundColor: active ? `${label.color}24` : C.card,
+                      boxShadow: active ? `0 2px 8px ${label.color}47` : RAISED_SHADOW_SMALL,
+                    }}
+                  >
+                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: label.color }} />
+                    <span
+                      style={{
+                        color: active ? C.accent : C.muted,
+                        fontWeight: active ? 700 : 500,
+                      }}
+                    >
+                      {label.name}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
+            <span className="text-[10px] font-bold tracking-[1.1px] text-[var(--hm-muted)]">
+              FREQUENCY
+            </span>
+            <div className="mt-2 grid grid-cols-2 gap-2.5">
+              {[
+                { title: "Recurring", subtitle: "Repeats periodically", Icon: Repeat, value: true },
+                { title: "One-Time", subtitle: "Single target event", Icon: Flag, value: false },
+              ].map(({ title, subtitle, Icon, value }) => {
+                const active = isRecurring === value;
+                return (
+                  <button
+                    key={title}
+                    type="button"
+                    onClick={() => setIsRecurring(value)}
+                    className="rounded-xl p-3 text-left"
+                    style={{
+                      backgroundColor: active ? `${C.accent}14` : C.card,
+                      boxShadow: active
+                        ? `0 4px 14px ${C.accent}4d`
+                        : RAISED_SHADOW_SMALL,
+                    }}
+                  >
+                    <div className="flex items-center">
+                      <Icon
+                        className="h-[18px] w-[18px]"
+                        style={{ color: active ? C.accent : C.muted }}
+                      />
+                      <span className="flex-1" />
+                      {active ? (
+                        <CheckCircle2 className="h-4 w-4" style={{ color: C.accent }} />
+                      ) : (
+                        <span className="h-4 w-4 rounded-full border border-[var(--hm-muted)]" />
+                      )}
+                    </div>
+                    <div
+                      className="mt-2 text-sm font-bold"
+                      style={{ color: active ? C.white : C.muted }}
+                    >
+                      {title}
+                    </div>
+                    <div className="mt-0.5 text-[11px] text-[var(--hm-muted)]">{subtitle}</div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {isRecurring && (
+            <>
+              <div>
+                <span className="text-[10px] font-bold tracking-[1.1px] text-[var(--hm-muted)]">
+                  HOW OFTEN DOES IT REPEAT?
+                </span>
+                <div className="mt-2 flex gap-1.5 overflow-x-auto pb-1">
+                  {PRESETS.map((item) => {
+                    const active = preset === item.label;
+                    return (
+                      <button
+                        key={item.label}
+                        type="button"
+                        onClick={() => applyPreset(item)}
+                        className="shrink-0 rounded-full px-2.5 py-1.5 text-[11px]"
+                        style={{
+                          backgroundColor: active ? `${C.accent}24` : C.surfaceLight,
+                          color: active ? C.accent : C.muted,
+                          fontWeight: active ? 700 : 500,
+                        }}
+                      >
+                        {item.label}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div
+                  className="mt-2 flex items-center gap-2 rounded-xl px-3 py-2.5"
+                  style={{ backgroundColor: C.surfaceLight }}
+                >
+                  <span className="text-[13px] font-semibold text-[var(--hm-muted)]">Every</span>
+                  <input
+                    type="number"
+                    min={1}
+                    value={interval}
+                    onChange={(event) => {
+                      const next = parseInt(event.target.value || "1", 10);
+                      setIntervalValue(Number.isNaN(next) || next < 1 ? 1 : next);
+                    }}
+                    className="w-12 rounded-lg px-2 py-1.5 text-center text-sm font-bold text-[var(--hm-white)] focus:outline-none"
+                    style={{ backgroundColor: C.card }}
+                  />
+                  <select
+                    value={unit}
+                    onChange={(event) => setUnit(event.target.value as typeof unit)}
+                    className="flex-1 rounded-lg px-2 py-1.5 text-[13px] font-semibold text-[var(--hm-white)] focus:outline-none"
+                    style={{ backgroundColor: C.card }}
+                  >
+                    <option value="days">day(s)</option>
+                    <option value="hours">hour(s)</option>
+                    <option value="months">month(s)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <span className="text-[10px] font-bold tracking-[1.1px] text-[var(--hm-muted)]">
+                  FIRST OCCURRENCE / START TIME
+                </span>
+                <div
+                  className="mt-2 flex items-center gap-2.5 rounded-xl px-3.5 py-2.5"
+                  style={{ backgroundColor: C.card, boxShadow: RAISED_SHADOW_SMALL }}
+                >
+                  <CalendarDays className="h-5 w-5" style={{ color: C.accent }} />
+                  <span className="flex-1 truncate text-[13px] font-semibold text-[var(--hm-white)]">
+                    Tue, 24 Nov 2026 · 08:00 AM
+                  </span>
+                  <Pencil className="h-4 w-4 text-[var(--hm-muted)]" />
+                </div>
+              </div>
+            </>
+          )}
+
+          <div
+            className="flex items-center gap-3 rounded-xl px-3.5 py-2.5"
+            style={{ backgroundColor: C.card, boxShadow: RAISED_SHADOW_SMALL }}
+          >
+            <span
+              className="flex h-8 w-8 items-center justify-center rounded-lg"
+              style={{ backgroundColor: notify ? "rgba(237,243,236,0.12)" : "rgba(142,156,144,0.12)" }}
+            >
+              {notify ? (
+                <BellRing className="h-[18px] w-[18px] text-[var(--hm-white)]" />
+              ) : (
+                <BellOff className="h-[18px] w-[18px] text-[var(--hm-muted)]" />
+              )}
+            </span>
+            <div className="flex-1">
+              <div className="text-sm font-semibold text-[var(--hm-white)]">Remind Me</div>
+              <div className="text-xs text-[var(--hm-muted)]">
+                {notify ? "Notification will be sent" : "No notifications"}
+              </div>
+            </div>
+            <AppSwitch
+              value={notify}
+              onChange={() => setNotify((value) => !value)}
+              label="Remind me"
+            />
+          </div>
+        </div>
+
+        <div
+          className="flex items-center gap-2.5 px-4 py-3"
+          style={{ backgroundColor: C.card }}
+        >
+          {habit && (
+            <button
+              type="button"
+              onClick={onDelete}
+              aria-label="Delete habit"
+              className="rounded-xl p-2.5 text-[var(--hm-muted)] cursor-pointer"
+              style={{ backgroundColor: C.surfaceLight }}
+            >
+              <Trash2 className="h-5 w-5" />
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={save}
+            className="flex-1 rounded-xl bg-gradient-to-br from-[#43D17C] to-[#128A44] py-3 text-sm font-extrabold text-[#0A0E0B] shadow-[0_6px_16px_rgba(43,214,115,0.25)] cursor-pointer"
+          >
+            {habit ? "Save Changes" : "Create Habit"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Main demo                                                           */
+/* ------------------------------------------------------------------ */
 
 interface DemoSectionProps {
   habits: MockHabit[];
   onToggleHabit: (id: string) => void;
+  onAddHabit: (input: NewHabitInput) => void;
+  onUpdateHabit: (id: string, input: NewHabitInput) => void;
+  onDeleteHabit: (id: string) => void;
 }
 
-export function DemoSection({ habits, onToggleHabit }: DemoSectionProps) {
+export function DemoSection({
+  habits,
+  onToggleHabit,
+  onAddHabit,
+  onUpdateHabit,
+  onDeleteHabit,
+}: DemoSectionProps) {
   const [activeTab, setActiveTab] = React.useState<"list" | "calendar">("list");
-  const [selectedDay, setSelectedDay] = React.useState<number>(5);
-  const [isFormOpen, setIsFormOpen] = React.useState<boolean>(false);
-  const [isDrawerOpen, setIsDrawerOpen] = React.useState<boolean>(false);
+  const [isDrawerOpen, setIsDrawerOpen] = React.useState(false);
+  const [formHabit, setFormHabit] = React.useState<MockHabit | "new" | null>(null);
+  const [openSections, setOpenSections] = React.useState({ active: true, completed: true });
+  const [closedGroups, setClosedGroups] = React.useState<Record<string, boolean>>({});
 
-  const activeHabits = habits.filter((h) => !h.isDone);
-  const completedHabits = habits.filter((h) => h.isDone);
+  const activeHabits = habits.filter((habit) => !habit.isDone);
+  const completedHabits = habits.filter((habit) => habit.isDone);
+
+  const groupHabits = (list: MockHabit[]) => {
+    const groups = new Map<string | null, MockHabit[]>();
+    for (const habit of list) {
+      const key = habit.labelId;
+      groups.set(key, [...(groups.get(key) ?? []), habit]);
+    }
+    const labelled = DEMO_LABELS.filter((label) => groups.has(label.id)).sort((a, b) =>
+      a.name.localeCompare(b.name),
+    );
+    const result: { label: MockLabel | null; habits: MockHabit[] }[] = labelled.map((label) => ({
+      label,
+      habits: groups.get(label.id) ?? [],
+    }));
+    if (groups.has(null)) result.push({ label: null, habits: groups.get(null) ?? [] });
+    return result;
+  };
+
+  const renderSection = (
+    title: string,
+    key: "active" | "completed",
+    list: MockHabit[],
+    accent: string,
+  ) => (
+    <div>
+      <SectionHeader
+        title={title}
+        count={list.length}
+        accent={accent}
+        expanded={openSections[key]}
+        onToggle={() => setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }))}
+      />
+      {openSections[key] &&
+        (list.length === 0 ? (
+          <div
+            className="rounded-2xl px-4 py-5 text-sm text-[var(--hm-muted)]"
+            style={{ backgroundColor: C.card, boxShadow: RAISED_SHADOW_SMALL }}
+          >
+            {key === "active"
+              ? "All caught up. Nothing active right now."
+              : "Finished habits show up here."}
+          </div>
+        ) : (
+          <div>
+            {groupHabits(list).map(({ label, habits: group }) => {
+              const groupKey = `${key}:${label?.id ?? "none"}`;
+              const open = !closedGroups[groupKey];
+              return (
+                <div key={groupKey}>
+                  <LabelSubheader
+                    label={label}
+                    count={group.length}
+                    expanded={open}
+                    onToggle={() =>
+                      setClosedGroups((prev) => ({ ...prev, [groupKey]: open }))
+                    }
+                  />
+                  {open && (
+                    <div className="space-y-2.5 pb-1">
+                      {group.map((habit) => (
+                        <HabitTile
+                          key={habit.id}
+                          habit={habit}
+                          label={labelFor(DEMO_LABELS, habit.labelId)}
+                          onToggle={() => onToggleHabit(habit.id)}
+                          onEdit={() => setFormHabit(habit)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        ))}
+    </div>
+  );
+
+  const saveForm = (input: NewHabitInput) => {
+    if (formHabit && formHabit !== "new") {
+      onUpdateHabit(formHabit.id, input);
+    } else {
+      onAddHabit(input);
+    }
+    setFormHabit(null);
+  };
 
   return (
     <section
       id="demo"
       className="py-20 px-6 sm:px-10 border-y border-[#262626] bg-[#0A0A0A]/60"
     >
-      <div className="max-w-7xl mx-auto flex flex-col items-center">
+      <div className="max-w-7xl mx-auto flex flex-col items-center" style={themeVars}>
         <div className="text-center mb-12">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#141414] border border-[#262626] text-xs text-[#22C55E] font-medium mb-3">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#141414] border border-[#262626] text-xs text-[#2BD673] font-medium mb-3">
             <Smartphone className="w-3.5 h-3.5" />
             <span>App Functionality Sample</span>
           </div>
@@ -53,9 +1251,9 @@ export function DemoSection({ habits, onToggleHabit }: DemoSectionProps) {
             Experience the Mobile App UI
           </h2>
           <p className="text-sm sm:text-base text-[#8A8A8A] max-w-lg mt-2 mx-auto">
-            Built matching the exact design tokens, typography, dark theme
-            palette, and layout of the Flutter application. Tap checkmarks
-            to toggle habits!
+            A working replica of the Flutter app: the same deep green-black
+            palette, label-coloured cards, live countdowns and heatmap calendar.
+            Tap a card to expand it, flip a switch to complete a habit.
           </p>
           <p className="text-[10px] text-[#8A8A8A] mt-2 italic">
             *Does not represent the final product*
@@ -71,364 +1269,198 @@ export function DemoSection({ habits, onToggleHabit }: DemoSectionProps) {
           </div>
 
           {/* Phone Inner Screen */}
-          <div className="relative w-full h-[680px] bg-black rounded-[36px] overflow-hidden flex flex-col border border-black select-none text-white font-sans">
+          <div
+            className="relative w-full h-[680px] rounded-[36px] overflow-hidden flex flex-col border border-black select-none text-[var(--hm-white)]"
+            style={{
+              backgroundImage: `linear-gradient(180deg, #0E1511 0%, ${C.black} 35%, ${C.black} 100%)`,
+            }}
+          >
             {/* Status Bar */}
-            <div className="h-10 pt-2 px-6 flex items-center justify-between text-[11px] text-[#8A8A8A] font-semibold">
+            <div className="h-10 pt-2 px-6 flex items-center justify-between text-[11px] text-[var(--hm-muted)] font-semibold">
               <span>9:41</span>
-              <div className="flex items-center gap-1.5 text-white">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#22C55E]" />
-                <div className="w-4 h-2 border border-white rounded-sm p-0.5 flex items-center">
-                  <div className="h-full w-full bg-[#22C55E] rounded-2xs" />
+              <div className="flex items-center gap-1.5 text-[var(--hm-white)]">
+                <span className="h-1.5 w-1.5 rounded-full bg-[var(--hm-accent)]" />
+                <div className="w-4 h-2 border border-[var(--hm-white)] rounded-sm p-0.5 flex items-center">
+                  <div className="h-full w-full rounded-[1px] bg-[var(--hm-accent)]" />
                 </div>
               </div>
             </div>
 
-            {/* Flutter AppBar */}
-            <div className="h-14 px-4 flex items-center justify-between border-b border-[#262626]/50 bg-black">
-              <div className="flex items-center gap-3">
+            {/* AppBar */}
+            <div className="h-14 px-3 flex items-center justify-between">
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => setIsDrawerOpen(!isDrawerOpen)}
-                  className="p-2 -ml-1 text-white hover:bg-[#141414] rounded-lg transition cursor-pointer"
+                  onClick={() => setIsDrawerOpen(true)}
+                  className="p-2 -ml-1 text-[var(--hm-white)] hover:bg-[var(--hm-surface)] rounded-lg transition cursor-pointer"
                   title="Menu"
+                  aria-label="Open menu"
                 >
-                  <Menu className="w-5 h-5" />
+                  <Menu className="h-5 w-5" />
                 </button>
-                <span className="font-bold text-lg tracking-tight">
-                  HabitMe
-                </span>
+                <span className="font-extrabold text-[21px] tracking-[0.4px]">HabitMe</span>
               </div>
 
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() =>
-                    setActiveTab(activeTab === "list" ? "calendar" : "list")
-                  }
-                  className="p-2 text-white hover:bg-[#141414] rounded-lg transition cursor-pointer"
-                  title={activeTab === "list" ? "Show calendar" : "Show list"}
-                >
-                  {activeTab === "list" ? (
-                    <CalendarIcon className="w-5 h-5 text-white" />
-                  ) : (
-                    <ListIcon className="w-5 h-5 text-white" />
-                  )}
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => setActiveTab(activeTab === "list" ? "calendar" : "list")}
+                className="p-2 text-[var(--hm-white)] hover:bg-[var(--hm-surface)] rounded-lg transition cursor-pointer"
+                title={activeTab === "list" ? "Show calendar" : "Show list"}
+                aria-label={activeTab === "list" ? "Show calendar" : "Show list"}
+              >
+                {activeTab === "list" ? (
+                  <CalendarDays className="h-5 w-5" />
+                ) : (
+                  <List className="h-5 w-5" />
+                )}
+              </button>
             </div>
 
-            {/* Simulated Drawer Overlay */}
+            {/* Drawer */}
             {isDrawerOpen && (
-              <div className="absolute inset-0 z-40 bg-black/60 flex animate-fade-in">
-                <div className="w-[82%] h-full bg-[#121212] border-r border-[#262626] p-5 flex flex-col justify-between shadow-2xl">
+              <div className="absolute inset-0 z-40 flex bg-black/60">
+                <div
+                  className="flex h-full w-[82%] flex-col justify-between border-r px-4 pt-5 shadow-2xl"
+                  style={{ backgroundColor: C.surface, borderColor: C.border }}
+                >
                   <div>
-                    <div className="flex items-center justify-between pb-4 border-b border-[#262626]">
-                      <div className="flex items-center gap-2.5">
-                        <Image
-                          src="/habitme_logo_rounded.png"
-                          alt="Logo"
-                          width={28}
-                          height={28}
-                          className="rounded-lg"
-                        />
-                        <span className="font-bold text-base">HabitMe</span>
+                    <div className="flex items-start gap-3.5 px-1 pb-5">
+                      <Image
+                        src="/habitme_logo_rounded.png"
+                        alt="HabitMe logo"
+                        width={52}
+                        height={52}
+                        className="rounded-2xl"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[22px] font-extrabold leading-tight">HabitMe</div>
+                        <div className="mt-0.5 truncate text-[12.5px] text-[var(--hm-muted)]">
+                          Your Day. Your Habits.
+                        </div>
                       </div>
                       <button
                         type="button"
                         onClick={() => setIsDrawerOpen(false)}
-                        className="p-1 rounded-lg text-[#8A8A8A] hover:text-white hover:bg-[#262626] cursor-pointer"
+                        aria-label="Close menu"
+                        className="rounded-lg p-1 text-[var(--hm-muted)] hover:bg-white/5 hover:text-white cursor-pointer"
                       >
-                        <X className="w-4 h-4" />
+                        <X className="h-4 w-4" />
                       </button>
                     </div>
+                    <div className="h-px" style={{ backgroundColor: C.border }} />
 
-                    <div className="mt-6 space-y-2">
-                      <div className="text-[11px] font-semibold text-[#8A8A8A] uppercase tracking-wider px-2">
-                        Data & Storage
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          alert("Simulated: Export habits to .sql backup file")
-                        }
-                        className="w-full flex items-center gap-3 px-3 py-2.5 text-xs font-medium rounded-xl hover:bg-[#1f1f1f] text-left transition cursor-pointer"
-                      >
-                        <Download className="w-4 h-4 text-[#22C55E]" />
-                        <span>Export Backup (SQL)</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          alert("Simulated: Import habits from .sql backup")
-                        }
-                        className="w-full flex items-center gap-3 px-3 py-2.5 text-xs font-medium rounded-xl hover:bg-[#1f1f1f] text-left transition cursor-pointer"
-                      >
-                        <Upload className="w-4 h-4 text-[#FF8A00]" />
-                        <span>Import Backup (SQL)</span>
-                      </button>
+                    <div className="mt-2 space-y-0.5">
+                      {[
+                        { icon: BookOpen, title: "Guide", subtitle: "How to use HabitMe & app details" },
+                        { icon: Tags, title: "Manage Labels", subtitle: "Create and organize your habit labels" },
+                        { icon: Bug, title: "Logs", subtitle: "Live app logs for debugging" },
+                        { icon: Upload, title: "Import", subtitle: "Restore habits and labels from a SQL backup" },
+                        { icon: Download, title: "Export", subtitle: "Save habits and labels as a SQL file" },
+                        { icon: Heart, title: "Support developer", subtitle: "Watch a short ad to support HabitMe" },
+                      ].map(({ icon: Icon, title, subtitle }) => (
+                        <button
+                          key={title}
+                          type="button"
+                          onClick={() => setIsDrawerOpen(false)}
+                          className="flex w-full items-center gap-4 rounded-lg px-3 py-2.5 text-left transition hover:bg-white/5 cursor-pointer"
+                        >
+                          <Icon className="h-5 w-5 shrink-0 text-[var(--hm-white)]" />
+                          <span className="min-w-0">
+                            <span className="block text-sm font-medium text-[var(--hm-white)]">
+                              {title}
+                            </span>
+                            <span className="block truncate text-xs text-[var(--hm-muted)]">
+                              {subtitle}
+                            </span>
+                          </span>
+                        </button>
+                      ))}
                     </div>
                   </div>
 
-                  <div className="pt-4 border-t border-[#262626] text-xs text-[#8A8A8A]">
-                    <p className="font-medium text-white">HabitMe v1.0.0</p>
-                    <p className="mt-1 flex items-center gap-1">
-                      Made by{" "}
-                      <Link
-                        href="https://www.itsmeprince.com"
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-[#22C55E] hover:underline flex items-center gap-0.5"
-                      >
+                  <Link
+                    href="https://www.itsmeprince.com"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mb-4 flex items-center gap-3 rounded-2xl px-4 py-3.5 transition hover:brightness-125"
+                    style={{ backgroundColor: C.black, boxShadow: RAISED_SHADOW }}
+                  >
+                    <span
+                      className="flex h-9 w-9 items-center justify-center rounded-[10px]"
+                      style={{ backgroundColor: "rgba(224,101,95,0.14)" }}
+                    >
+                      <Heart className="h-[18px] w-[18px]" style={{ color: C.red }} />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[11.5px] tracking-[0.6px] text-[var(--hm-muted)]">
+                        MADE BY
+                      </span>
+                      <span className="block text-[15px] font-bold text-[var(--hm-white)]">
                         ItsMe Prince
-                        <ExternalLink className="w-2.5 h-2.5 inline" />
-                      </Link>
-                    </p>
-                  </div>
+                      </span>
+                    </span>
+                    <ArrowUpRight className="h-[18px] w-[18px] text-[var(--hm-muted)]" />
+                  </Link>
                 </div>
-                <div
+                <button
+                  type="button"
+                  aria-label="Close menu"
                   className="flex-1 cursor-pointer"
                   onClick={() => setIsDrawerOpen(false)}
                 />
               </div>
             )}
 
-            {/* Screen Content - LIST OR CALENDAR VIEW */}
-            <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
+            {/* Screen Content */}
+            <div className="flex-1 overflow-y-auto px-4 pb-24 pt-1">
               {activeTab === "list" ? (
-                <>
-                  {/* Active Habits Section */}
-                  <div>
-                    <div className="flex items-center justify-between text-xs font-bold text-[#8A8A8A] uppercase tracking-wider mb-2.5 px-1">
-                      <span>Active ({activeHabits.length})</span>
-                      <span className="text-[10px] text-[#22C55E] font-medium lowercase">
-                        tap to complete
-                      </span>
-                    </div>
-
-                    <div className="space-y-2.5">
-                      {activeHabits.map((h) => (
-                        <div
-                          key={h.id}
-                          className="group p-3.5 rounded-2xl bg-[#141414] border border-[#262626] hover:border-[#383838] transition flex items-start gap-3 relative"
-                        >
-                          {/* Custom Checkbox */}
-                          <button
-                            type="button"
-                            onClick={() => onToggleHabit(h.id)}
-                            className="mt-0.5 w-6 h-6 rounded-lg border-2 border-[#262626] group-hover:border-[#22C55E] flex items-center justify-center transition shrink-0 cursor-pointer"
-                          >
-                            <Check className="w-3.5 h-3.5 opacity-0 group-hover:opacity-60 text-[#22C55E]" />
-                          </button>
-
-                          <div className="flex-1 min-w-0">
-                            <div className="text-sm font-semibold text-white truncate">
-                              {h.name}
-                            </div>
-                            <div className="text-[11px] text-[#8A8A8A] flex items-center gap-1.5 mt-0.5">
-                              <span
-                                className={`w-1.5 h-1.5 rounded-full ${h.type === "recurring"
-                                  ? "bg-[#22C55E]"
-                                  : "bg-[#FF8A00]"
-                                  }`}
-                              />
-                              <span>{h.recurrenceLabel}</span>
-                            </div>
-                            {h.dueText && (
-                              <div className="text-[10px] text-[#8A8A8A]/80 mt-1 font-mono flex items-center gap-1">
-                                <Clock className="w-2.5 h-2.5" />
-                                {h.dueText}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Completed Habits Section */}
-                  {completedHabits.length > 0 && (
-                    <div className="pt-2">
-                      <div className="flex items-center justify-between text-xs font-bold text-[#8A8A8A] uppercase tracking-wider mb-2.5 px-1">
-                        <span>Completed ({completedHabits.length})</span>
-                        <span className="text-[10px] text-[#FF8A00] font-medium lowercase">
-                          recurring resets live
-                        </span>
-                      </div>
-
-                      <div className="space-y-2.5">
-                        {completedHabits.map((h) => (
-                          <div
-                            key={h.id}
-                            className="p-3.5 rounded-2xl bg-[#0D0D0D] border border-[#262626]/60 flex items-start gap-3 opacity-80"
-                          >
-                            <button
-                              type="button"
-                              onClick={() => onToggleHabit(h.id)}
-                              className="mt-0.5 w-6 h-6 rounded-lg bg-[#22C55E] text-black font-bold flex items-center justify-center shrink-0 shadow-sm shadow-[#22C55E]/40 cursor-pointer"
-                            >
-                              <Check className="w-3.5 h-3.5 stroke-[3]" />
-                            </button>
-                            <div className="flex-1 min-w-0">
-                              <div className="text-sm font-semibold text-zinc-400 line-through truncate">
-                                {h.name}
-                              </div>
-                              <div className="text-[11px] text-[#8A8A8A] mt-0.5">
-                                {h.recurrenceLabel}
-                              </div>
-                              {h.dueText && (
-                                <div className="text-[10px] text-[#FF8A00] font-mono mt-1 flex items-center gap-1.5">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-[#FF8A00] animate-ping" />
-                                  {h.dueText}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </>
-              ) : (
-                /* CALENDAR VIEW */
-                <div className="space-y-4 pt-1">
-                  {/* Mini Month Header */}
-                  <div className="flex items-center justify-between px-1">
-                    <span className="font-bold text-sm">November 2026</span>
-                    <div className="text-xs text-[#22C55E] font-medium">
-                      Today
-                    </div>
-                  </div>
-
-                  {/* Calendar Grid */}
-                  <div className="bg-[#141414] border border-[#262626] rounded-2xl p-3">
-                    <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-semibold text-[#8A8A8A] mb-2">
-                      <span>M</span>
-                      <span>T</span>
-                      <span>W</span>
-                      <span>T</span>
-                      <span>F</span>
-                      <span>S</span>
-                      <span>S</span>
-                    </div>
-                    <div className="grid grid-cols-7 gap-1 text-center text-xs">
-                      {[...Array(30)].map((_, i) => {
-                        const day = i + 1;
-                        const isCurrent = day === selectedDay;
-                        const hasCompletions = [
-                          2, 3, 5, 8, 12, 15, 20,
-                        ].includes(day);
-
-                        return (
-                          <button
-                            type="button"
-                            key={day}
-                            onClick={() => setSelectedDay(day)}
-                            className={`h-8 rounded-lg flex flex-col items-center justify-center relative transition cursor-pointer ${isCurrent
-                              ? "bg-[#22C55E] text-black font-bold"
-                              : "hover:bg-[#262626] text-white"
-                              }`}
-                          >
-                            <span>{day}</span>
-                            {hasCompletions && !isCurrent && (
-                              <span className="w-1 h-1 bg-[#22C55E] rounded-full absolute bottom-1" />
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Day summary */}
-                  <div className="p-3 bg-[#0D0D0D] border border-[#262626] rounded-xl text-xs space-y-1.5">
-                    <div className="font-semibold text-white">
-                      Day {selectedDay} Schedule
-                    </div>
-                    <p className="text-[#8A8A8A] text-[11px]">
-                      2 habits scheduled on this date. Filter by one-time or
-                      recurring to review consistency streaks.
-                    </p>
-                  </div>
+                <div className="space-y-3.5">
+                  {renderSection("Active", "active", activeHabits, C.accent)}
+                  {renderSection("Completed", "completed", completedHabits, C.orange)}
                 </div>
+              ) : (
+                <CalendarView
+                  habits={habits}
+                  labels={DEMO_LABELS}
+                  onToggleHabit={onToggleHabit}
+                  onEditHabit={(habit) => setFormHabit(habit)}
+                />
               )}
             </div>
 
-            {/* FAB (Floating Action Button) */}
-            <div className="absolute bottom-5 right-5 z-20">
+            {/* FAB */}
+            <div className="absolute bottom-5 right-4 z-20">
               <button
                 type="button"
-                onClick={() => setIsFormOpen(true)}
-                className="h-12 px-4 rounded-2xl bg-[#22C55E] text-black font-bold text-xs flex items-center gap-2 shadow-lg shadow-[#22C55E]/40 hover:scale-105 transition cursor-pointer"
+                onClick={() => setFormHabit("new")}
+                className="flex h-[46px] items-center gap-2 rounded-[18px] bg-gradient-to-br from-[#43D17C] to-[#128A44] px-4 text-xs font-extrabold text-[#0A0E0B] shadow-[0_8px_20px_rgba(43,214,115,0.28)] transition hover:scale-[1.03] cursor-pointer"
               >
-                <Plus className="w-4 h-4 stroke-[3]" />
-                <span>New Habit</span>
+                <Plus className="h-4 w-4 stroke-[3]" />
+                <span>New habit</span>
               </button>
             </div>
 
-            {/* Modal Form Preview */}
-            {isFormOpen && (
-              <div className="absolute inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end animate-fade-in">
-                <div className="w-full bg-[#141414] border-t border-[#262626] rounded-t-3xl p-5 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-sm">Add New Habit</span>
-                    <button
-                      type="button"
-                      onClick={() => setIsFormOpen(false)}
-                      className="p-1 rounded-lg text-[#8A8A8A] hover:text-white cursor-pointer"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-
-                  <div className="space-y-3 text-xs">
-                    <div>
-                      <label className="text-[10px] text-[#8A8A8A] font-medium block mb-1">
-                        HABIT NAME
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="e.g. Read 20 pages"
-                        className="w-full bg-black border border-[#262626] rounded-xl px-3 py-2 text-white placeholder-zinc-600 focus:outline-none focus:border-[#22C55E]"
-                        defaultValue="Read 20 pages"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-[10px] text-[#8A8A8A] font-medium block mb-1">
-                        TYPE
-                      </label>
-                      <div className="grid grid-cols-2 gap-2">
-                        <button type="button" className="py-2 rounded-xl bg-[#22C55E]/20 border border-[#22C55E] text-[#22C55E] font-semibold text-center cursor-pointer">
-                          Recurring
-                        </button>
-                        <button type="button" className="py-2 rounded-xl bg-black border border-[#262626] text-[#8A8A8A] font-semibold text-center cursor-pointer">
-                          One-time
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="p-2.5 rounded-xl bg-[#0D0D0D] border border-[#262626] text-[11px] text-[#8A8A8A]">
-                      Cycle interval: Every{" "}
-                      <span className="text-white font-bold">1</span> day at{" "}
-                      <span className="text-[#22C55E] font-bold">
-                        08:00 AM
-                      </span>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => setIsFormOpen(false)}
-                      className="w-full py-2.5 rounded-xl bg-[#22C55E] text-black font-bold text-center mt-2 cursor-pointer"
-                    >
-                      Save Habit
-                    </button>
-                  </div>
-                </div>
-              </div>
+            {/* Habit form dialog */}
+            {formHabit !== null && (
+              <HabitForm
+                habit={formHabit === "new" ? null : formHabit}
+                onClose={() => setFormHabit(null)}
+                onSave={saveForm}
+                onDelete={() => {
+                  if (formHabit !== "new") onDeleteHabit(formHabit.id);
+                  setFormHabit(null);
+                }}
+              />
             )}
           </div>
         </div>
+
+        <p className="mt-8 flex items-center gap-2 text-xs text-[#8A8A8A]">
+          <Clock className="h-3.5 w-3.5" />
+          Live countdowns, label groups and the calendar heatmap all run in this
+          mockup — no app install needed.
+        </p>
       </div>
     </section>
   );
 }
-
