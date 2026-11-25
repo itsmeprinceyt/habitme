@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "HabitMe — Your day. Your habits | Made By ItsMe Prince",
+  title: "HabitMe — Keep the habit alive | Made By ItsMe Prince",
   description:
-    "A private, 100% offline, privacy-first habit tracker designed with an elegant dark theme, live recurrence cycles, and zero tracking.",
+    "We repeat things daily and they become habits, but a break distorts them. HabitMe is a private, local-first habit tracker that keeps you consistent even after a pause — no account, no cloud sync, and your habit data stays on your device.",
   icons: {
     icon: "/habitme_logo_rounded.png",
   },

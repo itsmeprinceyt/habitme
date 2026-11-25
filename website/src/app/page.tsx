@@ -4,13 +4,12 @@ import React, { useState, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Download } from "lucide-react";
-import { GithubIcon } from "./components/utils/GithubIcon";
 import { HeroSection } from "./components/HeroSection";
 import { DemoSection, MockHabit, NewHabitInput } from "./components/DemoSection";
 import { FeaturesSection } from "./components/FeaturesSection";
 import { AboutSection } from "./components/AboutSection";
-
-const GITHUB_RELEASE_URL = "https://github.com/itsmeprinceyt/habitme/releases";
+import { SiteFooter } from "./components/SiteFooter";
+import { GITHUB_RELEASE_URL, MADE_BY_URL } from "../utils/main.util";
 
 export default function Home() {
   const demoRef = useRef<HTMLDivElement>(null);
@@ -180,7 +179,7 @@ export default function Home() {
               <span className="font-bold text-lg tracking-tight flex items-center gap-2">
                 HabitMe
                 <span className="text-[10px] font-semibold uppercase tracking-wider bg-[#22C55E]/15 text-[#22C55E] px-2 py-0.5 rounded-full border border-[#22C55E]/30">
-                  Your Day. Your Habits.
+                  Keep the habit alive.
                 </span>
               </span>
             </div>
@@ -221,7 +220,7 @@ export default function Home() {
 
           <div className="flex items-center gap-3">
             <Link
-              href="https://www.itsmeprince.com"
+              href={MADE_BY_URL}
               target="_blank"
               rel="noopener noreferrer"
               className="hidden sm:inline-flex text-xs text-[#8A8A8A] hover:text-white transition-colors"
@@ -245,10 +244,7 @@ export default function Home() {
       {/* Main Content */}
       <main className="flex-1 relative z-10">
         {/* HERO SECTION */}
-        <HeroSection
-          githubReleaseUrl={GITHUB_RELEASE_URL}
-          onNavigateToDemo={() => scrollTo(demoRef)}
-        />
+        <HeroSection onNavigateToDemo={() => scrollTo(demoRef)} />
 
         {/* INTERACTIVE FLUTTER APP MOCKUP SECTION */}
         <div ref={demoRef}>
@@ -268,59 +264,12 @@ export default function Home() {
 
         {/* CALL TO ACTION / DEVELOPER SECTION */}
         <div ref={aboutRef}>
-          <AboutSection githubReleaseUrl={GITHUB_RELEASE_URL} />
+          <AboutSection />
         </div>
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-[#262626] py-10 px-6 sm:px-10 text-xs text-[#8A8A8A]">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <span>© 2026 HabitMe.</span>
-            <span>All rights reserved.</span>
-          </div>
-
-          <div className="flex items-center gap-6">
-            <Link
-              href="https://www.itsmeprince.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-white transition-colors"
-            >
-              itsmeprince.com
-            </Link>
-            <Link
-              href={GITHUB_RELEASE_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-white transition-colors flex items-center gap-1"
-            >
-              <GithubIcon className="w-3.5 h-3.5" />
-              <span>GitHub Release</span>
-            </Link>
-            <Link
-              href="#features"
-              onClick={(e) => {
-                e.preventDefault();
-                scrollTo(featuresRef);
-              }}
-              className="hover:text-white transition-colors"
-            >
-              Features
-            </Link>
-            <Link
-              href="#demo"
-              onClick={(e) => {
-                e.preventDefault();
-                scrollTo(demoRef);
-              }}
-              className="hover:text-white transition-colors"
-            >
-              App UI Demo
-            </Link>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

@@ -1,6 +1,4 @@
 "use client";
-
-import React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -32,6 +30,8 @@ import {
   CalendarClock,
   Tag,
 } from "lucide-react";
+import { MADE_BY_URL } from "../../utils/main.util";
+import { useEffect, useState } from "react";
 
 export type HabitType = "recurring" | "one-time";
 
@@ -108,8 +108,10 @@ const themeVars = {
   fontFamily: 'Roboto, "Helvetica Neue", Arial, Helvetica, sans-serif',
 } as React.CSSProperties;
 
-const RAISED_SHADOW = "0 5px 14px rgba(0,0,0,0.45), 0 -1px 3px rgba(255,255,255,0.08)";
-const RAISED_SHADOW_SMALL = "0 3px 8px rgba(0,0,0,0.35), 0 -1px 2px rgba(255,255,255,0.06)";
+const RAISED_SHADOW =
+  "0 5px 14px rgba(0,0,0,0.45), 0 -1px 3px rgba(255,255,255,0.08)";
+const RAISED_SHADOW_SMALL =
+  "0 3px 8px rgba(0,0,0,0.35), 0 -1px 2px rgba(255,255,255,0.06)";
 
 /* ------------------------------------------------------------------ */
 /* Helpers                                                             */
@@ -168,16 +170,19 @@ function formatCountdown(target: number, now: number) {
 }
 
 function useTick(enabled: boolean) {
-  const [now, setNow] = React.useState<number | null>(null);
+  const [now, setNow] = useState<number | null>(null);
 
-  React.useEffect(() => {
-    if (!enabled) {
-      setNow(null);
-      return;
-    }
-    setNow(Date.now());
-    const timer = window.setInterval(() => setNow(Date.now()), 1000);
-    return () => window.clearInterval(timer);
+  useEffect(() => {
+    const load = () => {
+      if (!enabled) {
+        setNow(null);
+        return;
+      }
+      setNow(Date.now());
+      const timer = window.setInterval(() => setNow(Date.now()), 1000);
+      return () => window.clearInterval(timer);
+    };
+    load();
   }, [enabled]);
 
   return now;
@@ -211,17 +216,17 @@ function AppSwitch({
         event.stopPropagation();
         onChange();
       }}
-      className={`relative h-[27px] w-[46px] shrink-0 rounded-full p-[3px] transition-all duration-300 cursor-pointer ${
+      className={`relative h-6.75 w-11.5 shrink-0 rounded-full p-0.75 transition-all duration-300 cursor-pointer ${
         value
-          ? "bg-gradient-to-br from-[#43D17C] to-[#128A44] shadow-[0_0_12px_-2px_rgba(43,214,115,0.55)]"
-          : "bg-[var(--hm-surface-light)] shadow-[0_3px_8px_rgba(0,0,0,0.35)]"
+          ? "bg-linear-to-br from-[#43D17C] to-[#128A44] shadow-[0_0_12px_-2px_rgba(43,214,115,0.55)]"
+          : "bg-(--hm-surface-light) shadow-[0_3px_8px_rgba(0,0,0,0.35)]"
       }`}
     >
       <span
-        className={`block h-[21px] w-[21px] rounded-full transition-transform duration-300 ease-out ${
+        className={`block h-5.25 w-5.25 rounded-full transition-transform duration-300 ease-out ${
           value
-            ? "translate-x-[19px] bg-[var(--hm-black)]"
-            : "translate-x-0 bg-[var(--hm-muted)]"
+            ? "translate-x-4.75 bg-(--hm-black)"
+            : "translate-x-0 bg-(--hm-muted)"
         }`}
         style={{ boxShadow: "0 2px 4px rgba(0,0,0,0.4)" }}
       />
@@ -253,7 +258,7 @@ function SectionHeader({
         style={{ backgroundColor: accent }}
       />
       <span className="flex flex-1 items-center gap-2.5">
-        <span className="text-[13px] font-bold tracking-[1.4px] text-[var(--hm-white)]">
+        <span className="text-[13px] font-bold tracking-[1.4px] text-(--hm-white)">
           {title.toUpperCase()}
         </span>
         <span
@@ -264,11 +269,11 @@ function SectionHeader({
         </span>
       </span>
       <span
-        className="rounded-lg bg-[var(--hm-surface-light)] p-1"
+        className="rounded-lg bg-(--hm-surface-light) p-1"
         style={{ boxShadow: RAISED_SHADOW_SMALL }}
       >
         <ChevronDown
-          className={`h-[18px] w-[18px] text-[var(--hm-muted)] transition-transform duration-200 ${
+          className={`h-4.5 w-4.5 text-(--hm-muted) transition-transform duration-200 ${
             expanded ? "rotate-180" : ""
           }`}
         />
@@ -301,20 +306,20 @@ function LabelSubheader({
       />
       <span
         className={`text-[13px] font-semibold tracking-[0.2px] ${
-          label ? "text-[var(--hm-white)]" : "text-[var(--hm-muted)]"
+          label ? "text-(--hm-white)" : "text-(--hm-muted)"
         }`}
       >
         {label?.name ?? "No Label"}
       </span>
       <span
-        className="rounded-lg px-1.5 py-[1px] text-[11px] font-bold"
+        className="rounded-lg px-1.5 py-px text-[11px] font-bold"
         style={{ backgroundColor: `${color}26`, color }}
       >
         {count}
       </span>
       <span className="flex-1" />
       <ChevronDown
-        className={`h-[17px] w-[17px] text-[var(--hm-muted)] transition-transform duration-200 ${
+        className={`h-4.25 w-4.25 text-(--hm-muted) transition-transform duration-200 ${
           expanded ? "rotate-180" : ""
         }`}
       />
@@ -337,14 +342,15 @@ function HabitTile({
   onToggle: () => void;
   onEdit: () => void;
 }) {
-  const [expanded, setExpanded] = React.useState(false);
+  const [expanded, setExpanded] = useState(false);
   const now = useTick(expanded);
 
   const themeColor = label?.color ?? C.accentDeep;
   const done = habit.isDone;
   const strike = done && habit.type === "one-time";
   const target = habit.dueAt ? new Date(habit.dueAt).getTime() : null;
-  const countdown = now !== null && target !== null ? formatCountdown(target, now) : null;
+  const countdown =
+    now !== null && target !== null ? formatCountdown(target, now) : null;
   const countdownOverdue = countdown?.startsWith("Overdue") ?? false;
 
   return (
@@ -396,15 +402,18 @@ function HabitTile({
           >
             {habit.name}
           </div>
-          <div className="mt-[3px] truncate text-[12.5px] leading-tight text-[var(--hm-white)]">
+          <div className="mt-0.75 truncate text-[12.5px] leading-tight text-(--hm-white)">
             {habit.recurrenceLabel}
           </div>
           {label && (
             <span
-              className="mt-[5px] inline-flex items-center gap-1 rounded-md px-[7px] py-0.5 text-[11px] font-semibold"
-              style={{ backgroundColor: `${label.color}24`, color: label.color }}
+              className="mt-1.25 inline-flex items-center gap-1 rounded-md px-1.75 py-0.5 text-[11px] font-semibold"
+              style={{
+                backgroundColor: `${label.color}24`,
+                color: label.color,
+              }}
             >
-              <Tag className="h-[11px] w-[11px]" />
+              <Tag className="h-2.75 w-2.75" />
               {label.name}
             </span>
           )}
@@ -418,19 +427,28 @@ function HabitTile({
             event.stopPropagation();
             onEdit();
           }}
-          className="rounded-lg p-1.5 text-[var(--hm-white)] transition-colors hover:bg-white/5 cursor-pointer"
+          className="rounded-lg p-1.5 text-(--hm-white) transition-colors hover:bg-white/5 cursor-pointer"
         >
-          <Pencil className="h-[19px] w-[19px]" />
+          <Pencil className="h-4.75 w-4.75" />
         </button>
 
-        <AppSwitch value={done} onChange={onToggle} label={`Complete ${habit.name}`} />
+        <AppSwitch
+          value={done}
+          onChange={onToggle}
+          label={`Complete ${habit.name}`}
+        />
       </div>
 
       {expanded && (
         <div className="mt-3">
-          <div className="rounded-[14px] p-[1px]" style={{ backgroundImage: `linear-gradient(160deg, ${C.borderStrong}, ${C.border} 55%, transparent)` }}>
+          <div
+            className="rounded-[14px] p-px"
+            style={{
+              backgroundImage: `linear-gradient(160deg, ${C.borderStrong}, ${C.border} 55%, transparent)`,
+            }}
+          >
             <div
-              className="rounded-[13px] p-[13px]"
+              className="rounded-[13px] p-3.25"
               style={{
                 backgroundImage: label
                   ? `linear-gradient(180deg, ${tint(themeColor, 14).replace(
@@ -442,8 +460,13 @@ function HabitTile({
             >
               {label && (
                 <div className="mb-2 flex items-center gap-1.5">
-                  <Tag className="h-[15px] w-[15px]" style={{ color: label.color }} />
-                  <span className="text-xs font-semibold text-[var(--hm-muted)]">Label:</span>
+                  <Tag
+                    className="h-3.75 w-3.75"
+                    style={{ color: label.color }}
+                  />
+                  <span className="text-xs font-semibold text-(--hm-muted)">
+                    Label:
+                  </span>
                   <span
                     className="truncate text-[12.5px] font-bold"
                     style={{ color: label.color }}
@@ -456,23 +479,31 @@ function HabitTile({
               {habit.dueLabel && !(done && habit.type === "one-time") ? (
                 <>
                   <div className="flex items-center gap-1.5">
-                    <CalendarClock className="h-[15px] w-[15px]" style={{ color: themeColor }} />
-                    <span className="text-xs font-semibold text-[var(--hm-muted)]">
+                    <CalendarClock
+                      className="h-3.75 w-3.75"
+                      style={{ color: themeColor }}
+                    />
+                    <span className="text-xs font-semibold text-(--hm-muted)">
                       {habit.type === "recurring"
                         ? done
                           ? "Next occurrence:"
                           : "Due date:"
                         : "Scheduled date:"}
                     </span>
-                    <span className="truncate text-[12.5px] font-semibold text-[var(--hm-white)]">
+                    <span className="truncate text-[12.5px] font-semibold text-(--hm-white)">
                       {habit.dueLabel}
                     </span>
                   </div>
 
                   <div className="mt-2 flex flex-wrap items-center gap-1.5">
                     <span className="flex items-center gap-1.5">
-                      <Clock className="h-[15px] w-[15px]" style={{ color: themeColor }} />
-                      <span className="text-xs font-semibold text-[var(--hm-muted)]">Countdown:</span>
+                      <Clock
+                        className="h-3.75 w-3.75"
+                        style={{ color: themeColor }}
+                      />
+                      <span className="text-xs font-semibold text-(--hm-muted)">
+                        Countdown:
+                      </span>
                     </span>
                     <span
                       className="text-[12.5px] font-bold tabular-nums"
@@ -484,23 +515,36 @@ function HabitTile({
                 </>
               ) : done && habit.completedLabel ? (
                 <div className="flex items-center gap-1.5">
-                  <CheckCircle2 className="h-[15px] w-[15px]" style={{ color: C.green }} />
-                  <span className="text-xs font-semibold text-[var(--hm-muted)]">Completed at:</span>
-                  <span className="truncate text-[12.5px] font-semibold text-[var(--hm-white)]">
+                  <CheckCircle2
+                    className="h-3.75 w-3.75"
+                    style={{ color: C.green }}
+                  />
+                  <span className="text-xs font-semibold text-(--hm-muted)">
+                    Completed at:
+                  </span>
+                  <span className="truncate text-[12.5px] font-semibold text-(--hm-white)">
                     {habit.completedLabel}
                   </span>
                 </div>
               ) : (
                 <div className="flex items-center gap-1.5">
-                  <Info className="h-[15px] w-[15px] text-[var(--hm-muted)]" />
-                  <span className="text-xs text-[var(--hm-muted)]">No specific target time set</span>
+                  <Info className="h-3.75 w-3.75 text-(--hm-muted)" />
+                  <span className="text-xs text-(--hm-muted)">
+                    No specific target time set
+                  </span>
                 </div>
               )}
 
               {habit.notify && (
                 <div className="mt-2 flex items-center gap-1.5">
-                  <BellRing className="h-3.5 w-3.5" style={{ color: C.green }} />
-                  <span className="text-[11.5px] font-medium" style={{ color: C.green }}>
+                  <BellRing
+                    className="h-3.5 w-3.5"
+                    style={{ color: C.green }}
+                  />
+                  <span
+                    className="text-[11.5px] font-medium"
+                    style={{ color: C.green }}
+                  >
                     Notifications enabled for this habit
                   </span>
                 </div>
@@ -542,7 +586,8 @@ function HeatDay({
       ? Math.min(Math.max(baseAlpha + 0.14, 0.3), 0.9)
       : 0.18
     : baseAlpha;
-  const fill = count > 0 || selected ? `rgba(43,214,115,${alpha})` : "transparent";
+  const fill =
+    count > 0 || selected ? `rgba(43,214,115,${alpha})` : "transparent";
   const light = alpha > 0 && isLightFill(C.accent, alpha);
   const glow = count > 0 ? Math.min(0.14 + 0.045 * count, 0.5) : 0;
 
@@ -550,16 +595,17 @@ function HeatDay({
     <button
       type="button"
       onClick={onClick}
-      className="mx-auto flex h-[34px] w-[34px] items-center justify-center rounded-[10px] transition-all duration-200 cursor-pointer"
+      className="mx-auto flex h-8.5 w-8.5 items-center justify-center rounded-[10px] transition-all duration-200 cursor-pointer"
       style={{
         backgroundColor: fill,
-        boxShadow: [
-          glow > 0 ? `0 0 10px 1px rgba(43,214,115,${glow})` : null,
-          isToday ? "0 0 14px 1.5px rgba(43,214,115,0.55)" : null,
-          selected ? "0 0 0 2px rgba(237,243,236,0.55)" : null,
-        ]
-          .filter(Boolean)
-          .join(", ") || undefined,
+        boxShadow:
+          [
+            glow > 0 ? `0 0 10px 1px rgba(43,214,115,${glow})` : null,
+            isToday ? "0 0 14px 1.5px rgba(43,214,115,0.55)" : null,
+            selected ? "0 0 0 2px rgba(237,243,236,0.55)" : null,
+          ]
+            .filter(Boolean)
+            .join(", ") || undefined,
       }}
       aria-pressed={selected}
     >
@@ -588,9 +634,9 @@ function CalendarView({
   onToggleHabit: (id: string) => void;
   onEditHabit: (habit: MockHabit) => void;
 }) {
-  const [selectedDay, setSelectedDay] = React.useState(TODAY);
-  const [showOneTime, setShowOneTime] = React.useState(true);
-  const [showRecurring, setShowRecurring] = React.useState(true);
+  const [selectedDay, setSelectedDay] = useState(TODAY);
+  const [showOneTime, setShowOneTime] = useState(true);
+  const [showRecurring, setShowRecurring] = useState(true);
 
   const visible = habits.filter((habit) =>
     habit.type === "recurring" ? showRecurring : showOneTime,
@@ -598,8 +644,12 @@ function CalendarView({
   const countFor = (day: number) =>
     visible.filter((habit) => habit.days?.includes(day)).length;
 
-  const selectedHabits = visible.filter((habit) => habit.days?.includes(selectedDay));
-  const recurring = selectedHabits.filter((habit) => habit.type === "recurring");
+  const selectedHabits = visible.filter((habit) =>
+    habit.days?.includes(selectedDay),
+  );
+  const recurring = selectedHabits.filter(
+    (habit) => habit.type === "recurring",
+  );
   const oneTime = selectedHabits.filter((habit) => habit.type === "one-time");
 
   const monthName = new Intl.DateTimeFormat("en-GB", {
@@ -615,16 +665,15 @@ function CalendarView({
   ];
   while (cells.length % 7 !== 0) cells.push(null);
 
-  const dayList = (
-    list: MockHabit[],
-    title: string,
-    accent: string,
-  ) =>
+  const dayList = (list: MockHabit[], title: string, accent: string) =>
     list.length > 0 && (
       <div className="mb-2.5">
         <div className="mb-2 flex items-center gap-1.5">
-          <span className="h-3 w-[3px] rounded-full" style={{ backgroundColor: accent }} />
-          <span className="text-xs font-bold text-[var(--hm-white)]">{title}</span>
+          <span
+            className="h-3 w-0.75 rounded-full"
+            style={{ backgroundColor: accent }}
+          />
+          <span className="text-xs font-bold text-(--hm-white)">{title}</span>
         </div>
         <div className="space-y-2">
           {list.map((habit) => {
@@ -634,7 +683,10 @@ function CalendarView({
               <div
                 key={habit.id}
                 className="flex items-center gap-2.5 rounded-xl px-2.5 py-2"
-                style={{ backgroundColor: C.surface, border: `1px solid ${C.border}` }}
+                style={{
+                  backgroundColor: C.surface,
+                  border: `1px solid ${C.border}`,
+                }}
               >
                 <span
                   className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg"
@@ -653,7 +705,7 @@ function CalendarView({
                   >
                     {habit.name}
                   </div>
-                  <div className="truncate text-[10px] text-[var(--hm-muted)]">
+                  <div className="truncate text-[10px] text-(--hm-muted)">
                     {label?.name ?? "No Label"} · {habit.recurrenceLabel}
                   </div>
                 </div>
@@ -664,7 +716,7 @@ function CalendarView({
                   className="rounded-md p-0.5 cursor-pointer"
                 >
                   <CheckCircle2
-                    className="h-[18px] w-[18px]"
+                    className="h-4.5 w-4.5"
                     style={{ color: habit.isDone ? C.accent : C.faint }}
                   />
                 </button>
@@ -672,7 +724,7 @@ function CalendarView({
                   type="button"
                   aria-label={`Edit ${habit.name}`}
                   onClick={() => onEditHabit(habit)}
-                  className="rounded-md p-0.5 text-[var(--hm-muted)] cursor-pointer"
+                  className="rounded-md p-0.5 text-(--hm-muted) cursor-pointer"
                 >
                   <Pencil className="h-3.5 w-3.5" />
                 </button>
@@ -685,20 +737,25 @@ function CalendarView({
 
   return (
     <div className="space-y-3 pt-1">
-      <div className="rounded-2xl py-2" style={{ backgroundColor: C.card, boxShadow: RAISED_SHADOW }}>
+      <div
+        className="rounded-2xl py-2"
+        style={{ backgroundColor: C.card, boxShadow: RAISED_SHADOW }}
+      >
         <div className="flex items-center justify-between px-3 py-1">
           <button
             type="button"
             aria-label="Previous month"
-            className="rounded-lg p-1 text-[var(--hm-white)] hover:bg-white/5 cursor-pointer"
+            className="rounded-lg p-1 text-(--hm-white) hover:bg-white/5 cursor-pointer"
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
-          <span className="text-[16px] font-bold text-[var(--hm-white)]">{MONTH_TITLE}</span>
+          <span className="text-[16px] font-bold text-(--hm-white)">
+            {MONTH_TITLE}
+          </span>
           <button
             type="button"
             aria-label="Next month"
-            className="rounded-lg p-1 text-[var(--hm-white)] hover:bg-white/5 cursor-pointer"
+            className="rounded-lg p-1 text-(--hm-white) hover:bg-white/5 cursor-pointer"
           >
             <ChevronRight className="h-4 w-4" />
           </button>
@@ -708,7 +765,7 @@ function CalendarView({
           {["M", "T", "W", "T", "F", "S", "S"].map((day, index) => (
             <span
               key={`${day}-${index}`}
-              className="py-1 text-center text-xs font-semibold text-[var(--hm-muted)]"
+              className="py-1 text-center text-xs font-semibold text-(--hm-muted)"
             >
               {day}
             </span>
@@ -735,8 +792,18 @@ function CalendarView({
 
       <div className="flex gap-2.5">
         {[
-          { label: "One-Time", icon: Flag, active: showOneTime, toggle: () => setShowOneTime((v) => !v) },
-          { label: "Recurring", icon: Repeat, active: showRecurring, toggle: () => setShowRecurring((v) => !v) },
+          {
+            label: "One-Time",
+            icon: Flag,
+            active: showOneTime,
+            toggle: () => setShowOneTime((v) => !v),
+          },
+          {
+            label: "Recurring",
+            icon: Repeat,
+            active: showRecurring,
+            toggle: () => setShowRecurring((v) => !v),
+          },
         ].map(({ label, icon: Icon, active, toggle }) => (
           <button
             key={label}
@@ -745,10 +812,14 @@ function CalendarView({
             aria-pressed={active}
             className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl px-2.5 py-2.5 text-[13px] transition-all duration-200 cursor-pointer ${
               active
-                ? "bg-gradient-to-br from-[#43D17C] to-[#128A44] font-bold text-[#0A0E0B] shadow-[0_4px_14px_rgba(43,214,115,0.3)]"
-                : "font-medium text-[var(--hm-muted)]"
+                ? "bg-linear-to-br from-[#43D17C] to-[#128A44] font-bold text-[#0A0E0B] shadow-[0_4px_14px_rgba(43,214,115,0.3)]"
+                : "font-medium text-(--hm-muted)"
             }`}
-            style={active ? undefined : { backgroundColor: C.card, boxShadow: RAISED_SHADOW_SMALL }}
+            style={
+              active
+                ? undefined
+                : { backgroundColor: C.card, boxShadow: RAISED_SHADOW_SMALL }
+            }
           >
             <Icon className="h-4 w-4" />
             <span className="truncate">{label}</span>
@@ -761,13 +832,16 @@ function CalendarView({
         ))}
       </div>
 
-      <div className="rounded-2xl p-4" style={{ backgroundColor: C.card, boxShadow: RAISED_SHADOW }}>
+      <div
+        className="rounded-2xl p-4"
+        style={{ backgroundColor: C.card, boxShadow: RAISED_SHADOW }}
+      >
         <div className="mb-3 flex items-center justify-between gap-2">
-          <span className="text-[13px] font-bold leading-tight text-[var(--hm-white)]">
+          <span className="text-[13px] font-bold leading-tight text-(--hm-white)">
             {monthName}
           </span>
           <span
-            className="shrink-0 rounded-[10px] px-2 py-[3px] text-[11.5px] font-semibold text-[var(--hm-muted)]"
+            className="shrink-0 rounded-[10px] px-2 py-0.75 text-[11.5px] font-semibold text-(--hm-muted)"
             style={{ backgroundColor: C.surfaceLight }}
           >
             {selectedHabits.length} habits
@@ -775,7 +849,7 @@ function CalendarView({
         </div>
 
         {selectedHabits.length === 0 ? (
-          <p className="py-3 text-center text-[13px] leading-relaxed text-[var(--hm-muted)]">
+          <p className="py-3 text-center text-[13px] leading-relaxed text-(--hm-muted)">
             {!showOneTime && !showRecurring
               ? "Both filters are off. Turn on One-Time or Recurring above."
               : "No scheduled habits on this day."}
@@ -819,14 +893,16 @@ function HabitForm({
   onSave: (input: NewHabitInput) => void;
   onDelete: () => void;
 }) {
-  const [name, setName] = React.useState(habit?.name ?? "");
-  const [labelId, setLabelId] = React.useState<string | null>(habit?.labelId ?? null);
-  const [isRecurring, setIsRecurring] = React.useState(habit ? habit.type === "recurring" : true);
-  const [interval, setIntervalValue] = React.useState(1);
-  const [unit, setUnit] = React.useState<"days" | "hours" | "months">("days");
-  const [preset, setPreset] = React.useState("Daily");
-  const [notify, setNotify] = React.useState(habit?.notify ?? true);
-  const [error, setError] = React.useState("");
+  const [name, setName] = useState(habit?.name ?? "");
+  const [labelId, setLabelId] = useState<string | null>(habit?.labelId ?? null);
+  const [isRecurring, setIsRecurring] = useState(
+    habit ? habit.type === "recurring" : true,
+  );
+  const [interval, setIntervalValue] = useState(1);
+  const [unit, setUnit] = useState<"days" | "hours" | "months">("days");
+  const [preset, setPreset] = useState("Daily");
+  const [notify, setNotify] = useState(habit?.notify ?? true);
+  const [error, setError] = useState("");
 
   const applyPreset = (next: (typeof PRESETS)[number]) => {
     setPreset(next.label);
@@ -844,7 +920,9 @@ function HabitForm({
       name: trimmed,
       type: isRecurring ? "recurring" : "one-time",
       labelId,
-      recurrenceLabel: isRecurring ? recurrenceText(interval, unit) : "One-time habit",
+      recurrenceLabel: isRecurring
+        ? recurrenceText(interval, unit)
+        : "One-time habit",
       notify,
     });
   };
@@ -855,18 +933,21 @@ function HabitForm({
         className="flex max-h-[94%] w-full max-w-[320px] flex-col overflow-hidden rounded-[22px] border"
         style={{ backgroundColor: C.surface, borderColor: C.border }}
       >
-        <div className="flex items-center gap-3 border-b px-4 py-3" style={{ borderColor: C.border }}>
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#43D17C] to-[#128A44]">
-            <Plus className="h-5 w-5 stroke-[3] text-[#0A0E0B]" />
+        <div
+          className="flex items-center gap-3 border-b px-4 py-3"
+          style={{ borderColor: C.border }}
+        >
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-linear-to-br from-[#43D17C] to-[#128A44]">
+            <Plus className="h-5 w-5 stroke-3 text-[#0A0E0B]" />
           </span>
-          <span className="flex-1 text-[15px] font-bold text-[var(--hm-white)]">
+          <span className="flex-1 text-[15px] font-bold text-(--hm-white)">
             {habit ? "Edit Habit" : "Create New Habit"}
           </span>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="rounded-lg p-1.5 text-[var(--hm-muted)] hover:text-[var(--hm-white)] cursor-pointer"
+            className="rounded-lg p-1.5 text-(--hm-muted) hover:text-(--hm-white) cursor-pointer"
           >
             <X className="h-4 w-4" />
           </button>
@@ -874,7 +955,7 @@ function HabitForm({
 
         <div className="flex-1 space-y-3 overflow-y-auto px-4 py-3">
           <div>
-            <label className="text-[10px] font-bold tracking-[1.1px] text-[var(--hm-muted)]">
+            <label className="text-[10px] font-bold tracking-[1.1px] text-(--hm-muted)">
               HABIT TITLE
             </label>
             <input
@@ -884,21 +965,25 @@ function HabitForm({
                 setError("");
               }}
               placeholder="e.g. Drink 2L water, Morning run"
-              className="mt-2 w-full rounded-xl px-3.5 py-2.5 text-[13.5px] text-[var(--hm-white)] placeholder:text-[var(--hm-muted)] focus:outline-none"
+              className="mt-2 w-full rounded-xl px-3.5 py-2.5 text-[13.5px] text-(--hm-white) placeholder:text-(--hm-muted) focus:outline-none"
               style={{
                 backgroundColor: C.card,
                 border: `1px solid ${error ? C.orange : "transparent"}`,
               }}
             />
-            {error && <p className="mt-1 text-[11px]" style={{ color: C.orange }}>{error}</p>}
+            {error && (
+              <p className="mt-1 text-[11px]" style={{ color: C.orange }}>
+                {error}
+              </p>
+            )}
           </div>
 
           <div>
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold tracking-[1.1px] text-[var(--hm-muted)]">
+              <span className="text-[10px] font-bold tracking-[1.1px] text-(--hm-muted)">
                 LABEL / GROUP
               </span>
-              <span className="flex items-center gap-1 text-[11px] font-bold text-[var(--hm-white)]">
+              <span className="flex items-center gap-1 text-[11px] font-bold text-(--hm-white)">
                 <Plus className="h-3 w-3" /> New Label
               </span>
             </div>
@@ -911,7 +996,10 @@ function HabitForm({
                   backgroundColor: labelId === null ? `${C.accent}24` : C.card,
                   color: labelId === null ? C.accent : C.muted,
                   fontWeight: labelId === null ? 700 : 500,
-                  boxShadow: labelId === null ? `0 2px 8px ${C.accent}47` : RAISED_SHADOW_SMALL,
+                  boxShadow:
+                    labelId === null
+                      ? `0 2px 8px ${C.accent}47`
+                      : RAISED_SHADOW_SMALL,
                 }}
               >
                 None
@@ -926,10 +1014,15 @@ function HabitForm({
                     className="flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11.5px]"
                     style={{
                       backgroundColor: active ? `${label.color}24` : C.card,
-                      boxShadow: active ? `0 2px 8px ${label.color}47` : RAISED_SHADOW_SMALL,
+                      boxShadow: active
+                        ? `0 2px 8px ${label.color}47`
+                        : RAISED_SHADOW_SMALL,
                     }}
                   >
-                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: label.color }} />
+                    <span
+                      className="h-2 w-2 rounded-full"
+                      style={{ backgroundColor: label.color }}
+                    />
                     <span
                       style={{
                         color: active ? C.accent : C.muted,
@@ -945,13 +1038,23 @@ function HabitForm({
           </div>
 
           <div>
-            <span className="text-[10px] font-bold tracking-[1.1px] text-[var(--hm-muted)]">
+            <span className="text-[10px] font-bold tracking-[1.1px] text-(--hm-muted)">
               FREQUENCY
             </span>
             <div className="mt-2 grid grid-cols-2 gap-2.5">
               {[
-                { title: "Recurring", subtitle: "Repeats periodically", Icon: Repeat, value: true },
-                { title: "One-Time", subtitle: "Single target event", Icon: Flag, value: false },
+                {
+                  title: "Recurring",
+                  subtitle: "Repeats periodically",
+                  Icon: Repeat,
+                  value: true,
+                },
+                {
+                  title: "One-Time",
+                  subtitle: "Single target event",
+                  Icon: Flag,
+                  value: false,
+                },
               ].map(({ title, subtitle, Icon, value }) => {
                 const active = isRecurring === value;
                 return (
@@ -969,14 +1072,17 @@ function HabitForm({
                   >
                     <div className="flex items-center">
                       <Icon
-                        className="h-[18px] w-[18px]"
+                        className="h-4.5 w-4.5"
                         style={{ color: active ? C.accent : C.muted }}
                       />
                       <span className="flex-1" />
                       {active ? (
-                        <CheckCircle2 className="h-4 w-4" style={{ color: C.accent }} />
+                        <CheckCircle2
+                          className="h-4 w-4"
+                          style={{ color: C.accent }}
+                        />
                       ) : (
-                        <span className="h-4 w-4 rounded-full border border-[var(--hm-muted)]" />
+                        <span className="h-4 w-4 rounded-full border border-(--hm-muted)" />
                       )}
                     </div>
                     <div
@@ -985,7 +1091,9 @@ function HabitForm({
                     >
                       {title}
                     </div>
-                    <div className="mt-0.5 text-[11px] text-[var(--hm-muted)]">{subtitle}</div>
+                    <div className="mt-0.5 text-[11px] text-(--hm-muted)">
+                      {subtitle}
+                    </div>
                   </button>
                 );
               })}
@@ -995,7 +1103,7 @@ function HabitForm({
           {isRecurring && (
             <>
               <div>
-                <span className="text-[10px] font-bold tracking-[1.1px] text-[var(--hm-muted)]">
+                <span className="text-[10px] font-bold tracking-[1.1px] text-(--hm-muted)">
                   HOW OFTEN DOES IT REPEAT?
                 </span>
                 <div className="mt-2 flex gap-1.5 overflow-x-auto pb-1">
@@ -1008,7 +1116,9 @@ function HabitForm({
                         onClick={() => applyPreset(item)}
                         className="shrink-0 rounded-full px-2.5 py-1.5 text-[11px]"
                         style={{
-                          backgroundColor: active ? `${C.accent}24` : C.surfaceLight,
+                          backgroundColor: active
+                            ? `${C.accent}24`
+                            : C.surfaceLight,
                           color: active ? C.accent : C.muted,
                           fontWeight: active ? 700 : 500,
                         }}
@@ -1023,22 +1133,28 @@ function HabitForm({
                   className="mt-2 flex items-center gap-2 rounded-xl px-3 py-2.5"
                   style={{ backgroundColor: C.surfaceLight }}
                 >
-                  <span className="text-[13px] font-semibold text-[var(--hm-muted)]">Every</span>
+                  <span className="text-[13px] font-semibold text-(--hm-muted)">
+                    Every
+                  </span>
                   <input
                     type="number"
                     min={1}
                     value={interval}
                     onChange={(event) => {
                       const next = parseInt(event.target.value || "1", 10);
-                      setIntervalValue(Number.isNaN(next) || next < 1 ? 1 : next);
+                      setIntervalValue(
+                        Number.isNaN(next) || next < 1 ? 1 : next,
+                      );
                     }}
-                    className="w-12 rounded-lg px-2 py-1.5 text-center text-sm font-bold text-[var(--hm-white)] focus:outline-none"
+                    className="w-12 rounded-lg px-2 py-1.5 text-center text-sm font-bold text-(--hm-white) focus:outline-none"
                     style={{ backgroundColor: C.card }}
                   />
                   <select
                     value={unit}
-                    onChange={(event) => setUnit(event.target.value as typeof unit)}
-                    className="flex-1 rounded-lg px-2 py-1.5 text-[13px] font-semibold text-[var(--hm-white)] focus:outline-none"
+                    onChange={(event) =>
+                      setUnit(event.target.value as typeof unit)
+                    }
+                    className="flex-1 rounded-lg px-2 py-1.5 text-[13px] font-semibold text-(--hm-white) focus:outline-none"
                     style={{ backgroundColor: C.card }}
                   >
                     <option value="days">day(s)</option>
@@ -1049,18 +1165,24 @@ function HabitForm({
               </div>
 
               <div>
-                <span className="text-[10px] font-bold tracking-[1.1px] text-[var(--hm-muted)]">
+                <span className="text-[10px] font-bold tracking-[1.1px] text-(--hm-muted)">
                   FIRST OCCURRENCE / START TIME
                 </span>
                 <div
                   className="mt-2 flex items-center gap-2.5 rounded-xl px-3.5 py-2.5"
-                  style={{ backgroundColor: C.card, boxShadow: RAISED_SHADOW_SMALL }}
+                  style={{
+                    backgroundColor: C.card,
+                    boxShadow: RAISED_SHADOW_SMALL,
+                  }}
                 >
-                  <CalendarDays className="h-5 w-5" style={{ color: C.accent }} />
-                  <span className="flex-1 truncate text-[13px] font-semibold text-[var(--hm-white)]">
+                  <CalendarDays
+                    className="h-5 w-5"
+                    style={{ color: C.accent }}
+                  />
+                  <span className="flex-1 truncate text-[13px] font-semibold text-(--hm-white)">
                     Tue, 24 Nov 2026 · 08:00 AM
                   </span>
-                  <Pencil className="h-4 w-4 text-[var(--hm-muted)]" />
+                  <Pencil className="h-4 w-4 text-(--hm-muted)" />
                 </div>
               </div>
             </>
@@ -1072,17 +1194,23 @@ function HabitForm({
           >
             <span
               className="flex h-8 w-8 items-center justify-center rounded-lg"
-              style={{ backgroundColor: notify ? "rgba(237,243,236,0.12)" : "rgba(142,156,144,0.12)" }}
+              style={{
+                backgroundColor: notify
+                  ? "rgba(237,243,236,0.12)"
+                  : "rgba(142,156,144,0.12)",
+              }}
             >
               {notify ? (
-                <BellRing className="h-[18px] w-[18px] text-[var(--hm-white)]" />
+                <BellRing className="h-4.5 w-4.5 text-(--hm-white)" />
               ) : (
-                <BellOff className="h-[18px] w-[18px] text-[var(--hm-muted)]" />
+                <BellOff className="h-4.5 w-4.5 text-(--hm-muted)" />
               )}
             </span>
             <div className="flex-1">
-              <div className="text-sm font-semibold text-[var(--hm-white)]">Remind Me</div>
-              <div className="text-xs text-[var(--hm-muted)]">
+              <div className="text-sm font-semibold text-(--hm-white)">
+                Remind Me
+              </div>
+              <div className="text-xs text-(--hm-muted)">
                 {notify ? "Notification will be sent" : "No notifications"}
               </div>
             </div>
@@ -1103,7 +1231,7 @@ function HabitForm({
               type="button"
               onClick={onDelete}
               aria-label="Delete habit"
-              className="rounded-xl p-2.5 text-[var(--hm-muted)] cursor-pointer"
+              className="rounded-xl p-2.5 text-(--hm-muted) cursor-pointer"
               style={{ backgroundColor: C.surfaceLight }}
             >
               <Trash2 className="h-5 w-5" />
@@ -1112,7 +1240,7 @@ function HabitForm({
           <button
             type="button"
             onClick={save}
-            className="flex-1 rounded-xl bg-gradient-to-br from-[#43D17C] to-[#128A44] py-3 text-sm font-extrabold text-[#0A0E0B] shadow-[0_6px_16px_rgba(43,214,115,0.25)] cursor-pointer"
+            className="flex-1 rounded-xl bg-linear-to-br from-[#43D17C] to-[#128A44] py-3 text-sm font-extrabold text-[#0A0E0B] shadow-[0_6px_16px_rgba(43,214,115,0.25)] cursor-pointer"
           >
             {habit ? "Save Changes" : "Create Habit"}
           </button>
@@ -1141,11 +1269,14 @@ export function DemoSection({
   onUpdateHabit,
   onDeleteHabit,
 }: DemoSectionProps) {
-  const [activeTab, setActiveTab] = React.useState<"list" | "calendar">("list");
-  const [isDrawerOpen, setIsDrawerOpen] = React.useState(false);
-  const [formHabit, setFormHabit] = React.useState<MockHabit | "new" | null>(null);
-  const [openSections, setOpenSections] = React.useState({ active: true, completed: true });
-  const [closedGroups, setClosedGroups] = React.useState<Record<string, boolean>>({});
+  const [activeTab, setActiveTab] = useState<"list" | "calendar">("list");
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [formHabit, setFormHabit] = useState<MockHabit | "new" | null>(null);
+  const [openSections, setOpenSections] = useState({
+    active: true,
+    completed: true,
+  });
+  const [closedGroups, setClosedGroups] = useState<Record<string, boolean>>({});
 
   const activeHabits = habits.filter((habit) => !habit.isDone);
   const completedHabits = habits.filter((habit) => habit.isDone);
@@ -1156,14 +1287,16 @@ export function DemoSection({
       const key = habit.labelId;
       groups.set(key, [...(groups.get(key) ?? []), habit]);
     }
-    const labelled = DEMO_LABELS.filter((label) => groups.has(label.id)).sort((a, b) =>
-      a.name.localeCompare(b.name),
+    const labelled = DEMO_LABELS.filter((label) => groups.has(label.id)).sort(
+      (a, b) => a.name.localeCompare(b.name),
     );
-    const result: { label: MockLabel | null; habits: MockHabit[] }[] = labelled.map((label) => ({
-      label,
-      habits: groups.get(label.id) ?? [],
-    }));
-    if (groups.has(null)) result.push({ label: null, habits: groups.get(null) ?? [] });
+    const result: { label: MockLabel | null; habits: MockHabit[] }[] =
+      labelled.map((label) => ({
+        label,
+        habits: groups.get(label.id) ?? [],
+      }));
+    if (groups.has(null))
+      result.push({ label: null, habits: groups.get(null) ?? [] });
     return result;
   };
 
@@ -1179,12 +1312,14 @@ export function DemoSection({
         count={list.length}
         accent={accent}
         expanded={openSections[key]}
-        onToggle={() => setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }))}
+        onToggle={() =>
+          setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }))
+        }
       />
       {openSections[key] &&
         (list.length === 0 ? (
           <div
-            className="rounded-2xl px-4 py-5 text-sm text-[var(--hm-muted)]"
+            className="rounded-2xl px-4 py-5 text-sm text-(--hm-muted)"
             style={{ backgroundColor: C.card, boxShadow: RAISED_SHADOW_SMALL }}
           >
             {key === "active"
@@ -1241,7 +1376,10 @@ export function DemoSection({
       id="demo"
       className="py-20 px-6 sm:px-10 border-y border-[#262626] bg-[#0A0A0A]/60"
     >
-      <div className="max-w-7xl mx-auto flex flex-col items-center" style={themeVars}>
+      <div
+        className="max-w-7xl mx-auto flex flex-col items-center"
+        style={themeVars}
+      >
         <div className="text-center mb-12">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#141414] border border-[#262626] text-xs text-[#2BD673] font-medium mb-3">
             <Smartphone className="w-3.5 h-3.5" />
@@ -1251,9 +1389,10 @@ export function DemoSection({
             Experience the Mobile App UI
           </h2>
           <p className="text-sm sm:text-base text-[#8A8A8A] max-w-lg mt-2 mx-auto">
-            A working replica of the Flutter app: the same deep green-black
+            A working replica of the real app: the same deep green-black
             palette, label-coloured cards, live countdowns and heatmap calendar.
-            Tap a card to expand it, flip a switch to complete a habit.
+            Tap a card to expand it and flip a switch to complete a habit — then
+            watch recurring habits roll forward so the streak never dies.
           </p>
           <p className="text-[10px] text-[#8A8A8A] mt-2 italic">
             *Does not represent the final product*
@@ -1261,7 +1400,7 @@ export function DemoSection({
         </div>
 
         {/* Mobile Device Frame */}
-        <div className="relative w-full max-w-[380px] rounded-[44px] p-3 bg-gradient-to-b from-[#262626] via-[#141414] to-[#121212] border border-[#333] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9)]">
+        <div className="relative w-full max-w-95 rounded-[44px] p-3 bg-linear-to-b from-[#262626] via-[#141414] to-[#121212] border border-[#333] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9)]">
           {/* Phone Speaker & Camera Notch */}
           <div className="absolute top-5 left-1/2 -translate-x-1/2 w-28 h-4 bg-black rounded-full z-30 flex items-center justify-center">
             <div className="w-10 h-1 bg-[#262626] rounded-full mr-2" />
@@ -1270,18 +1409,18 @@ export function DemoSection({
 
           {/* Phone Inner Screen */}
           <div
-            className="relative w-full h-[680px] rounded-[36px] overflow-hidden flex flex-col border border-black select-none text-[var(--hm-white)]"
+            className="relative w-full h-170 rounded-[36px] overflow-hidden flex flex-col border border-black select-none text-(--hm-white)"
             style={{
               backgroundImage: `linear-gradient(180deg, #0E1511 0%, ${C.black} 35%, ${C.black} 100%)`,
             }}
           >
             {/* Status Bar */}
-            <div className="h-10 pt-2 px-6 flex items-center justify-between text-[11px] text-[var(--hm-muted)] font-semibold">
+            <div className="h-10 pt-2 px-6 flex items-center justify-between text-[11px] text-(--hm-muted) font-semibold">
               <span>9:41</span>
-              <div className="flex items-center gap-1.5 text-[var(--hm-white)]">
-                <span className="h-1.5 w-1.5 rounded-full bg-[var(--hm-accent)]" />
-                <div className="w-4 h-2 border border-[var(--hm-white)] rounded-sm p-0.5 flex items-center">
-                  <div className="h-full w-full rounded-[1px] bg-[var(--hm-accent)]" />
+              <div className="flex items-center gap-1.5 text-(--hm-white)">
+                <span className="h-1.5 w-1.5 rounded-full bg-(--hm-accent)" />
+                <div className="w-4 h-2 border border-(--hm-white) rounded-sm p-0.5 flex items-center">
+                  <div className="h-full w-full rounded-[1px] bg-(--hm-accent)" />
                 </div>
               </div>
             </div>
@@ -1292,21 +1431,27 @@ export function DemoSection({
                 <button
                   type="button"
                   onClick={() => setIsDrawerOpen(true)}
-                  className="p-2 -ml-1 text-[var(--hm-white)] hover:bg-[var(--hm-surface)] rounded-lg transition cursor-pointer"
+                  className="p-2 -ml-1 text-(--hm-white) hover:bg-(--hm-surface) rounded-lg transition cursor-pointer"
                   title="Menu"
                   aria-label="Open menu"
                 >
                   <Menu className="h-5 w-5" />
                 </button>
-                <span className="font-extrabold text-[21px] tracking-[0.4px]">HabitMe</span>
+                <span className="font-extrabold text-[21px] tracking-[0.4px]">
+                  HabitMe
+                </span>
               </div>
 
               <button
                 type="button"
-                onClick={() => setActiveTab(activeTab === "list" ? "calendar" : "list")}
-                className="p-2 text-[var(--hm-white)] hover:bg-[var(--hm-surface)] rounded-lg transition cursor-pointer"
+                onClick={() =>
+                  setActiveTab(activeTab === "list" ? "calendar" : "list")
+                }
+                className="p-2 text-(--hm-white) hover:bg-(--hm-surface) rounded-lg transition cursor-pointer"
                 title={activeTab === "list" ? "Show calendar" : "Show list"}
-                aria-label={activeTab === "list" ? "Show calendar" : "Show list"}
+                aria-label={
+                  activeTab === "list" ? "Show calendar" : "Show list"
+                }
               >
                 {activeTab === "list" ? (
                   <CalendarDays className="h-5 w-5" />
@@ -1333,8 +1478,10 @@ export function DemoSection({
                         className="rounded-2xl"
                       />
                       <div className="min-w-0 flex-1">
-                        <div className="text-[22px] font-extrabold leading-tight">HabitMe</div>
-                        <div className="mt-0.5 truncate text-[12.5px] text-[var(--hm-muted)]">
+                        <div className="text-[22px] font-extrabold leading-tight">
+                          HabitMe
+                        </div>
+                        <div className="mt-0.5 truncate text-[12.5px] text-(--hm-muted)">
                           Your Day. Your Habits.
                         </div>
                       </div>
@@ -1342,21 +1489,49 @@ export function DemoSection({
                         type="button"
                         onClick={() => setIsDrawerOpen(false)}
                         aria-label="Close menu"
-                        className="rounded-lg p-1 text-[var(--hm-muted)] hover:bg-white/5 hover:text-white cursor-pointer"
+                        className="rounded-lg p-1 text-(--hm-muted) hover:bg-white/5 hover:text-white cursor-pointer"
                       >
                         <X className="h-4 w-4" />
                       </button>
                     </div>
-                    <div className="h-px" style={{ backgroundColor: C.border }} />
+                    <div
+                      className="h-px"
+                      style={{ backgroundColor: C.border }}
+                    />
 
                     <div className="mt-2 space-y-0.5">
                       {[
-                        { icon: BookOpen, title: "Guide", subtitle: "How to use HabitMe & app details" },
-                        { icon: Tags, title: "Manage Labels", subtitle: "Create and organize your habit labels" },
-                        { icon: Bug, title: "Logs", subtitle: "Live app logs for debugging" },
-                        { icon: Upload, title: "Import", subtitle: "Restore habits and labels from a SQL backup" },
-                        { icon: Download, title: "Export", subtitle: "Save habits and labels as a SQL file" },
-                        { icon: Heart, title: "Support developer", subtitle: "Watch a short ad to support HabitMe" },
+                        {
+                          icon: BookOpen,
+                          title: "Guide",
+                          subtitle: "How to use HabitMe & app details",
+                        },
+                        {
+                          icon: Tags,
+                          title: "Manage Labels",
+                          subtitle: "Create and organize your habit labels",
+                        },
+                        {
+                          icon: Bug,
+                          title: "Logs",
+                          subtitle: "Live app logs for debugging",
+                        },
+                        {
+                          icon: Upload,
+                          title: "Import",
+                          subtitle:
+                            "Restore habits and labels from a SQL backup",
+                        },
+                        {
+                          icon: Download,
+                          title: "Export",
+                          subtitle: "Save habits and labels as a SQL file",
+                        },
+                        {
+                          icon: Heart,
+                          title: "Support developer",
+                          subtitle: "Watch a short ad to support HabitMe",
+                        },
                       ].map(({ icon: Icon, title, subtitle }) => (
                         <button
                           key={title}
@@ -1364,12 +1539,12 @@ export function DemoSection({
                           onClick={() => setIsDrawerOpen(false)}
                           className="flex w-full items-center gap-4 rounded-lg px-3 py-2.5 text-left transition hover:bg-white/5 cursor-pointer"
                         >
-                          <Icon className="h-5 w-5 shrink-0 text-[var(--hm-white)]" />
+                          <Icon className="h-5 w-5 shrink-0 text-(--hm-white)" />
                           <span className="min-w-0">
-                            <span className="block text-sm font-medium text-[var(--hm-white)]">
+                            <span className="block text-sm font-medium text-(--hm-white)">
                               {title}
                             </span>
-                            <span className="block truncate text-xs text-[var(--hm-muted)]">
+                            <span className="block truncate text-xs text-(--hm-muted)">
                               {subtitle}
                             </span>
                           </span>
@@ -1379,27 +1554,30 @@ export function DemoSection({
                   </div>
 
                   <Link
-                    href="https://www.itsmeprince.com"
+                    href={MADE_BY_URL}
                     target="_blank"
                     rel="noreferrer"
                     className="mb-4 flex items-center gap-3 rounded-2xl px-4 py-3.5 transition hover:brightness-125"
-                    style={{ backgroundColor: C.black, boxShadow: RAISED_SHADOW }}
+                    style={{
+                      backgroundColor: C.black,
+                      boxShadow: RAISED_SHADOW,
+                    }}
                   >
                     <span
                       className="flex h-9 w-9 items-center justify-center rounded-[10px]"
                       style={{ backgroundColor: "rgba(224,101,95,0.14)" }}
                     >
-                      <Heart className="h-[18px] w-[18px]" style={{ color: C.red }} />
+                      <Heart className="h-4.5 w-4.5" style={{ color: C.red }} />
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="block text-[11.5px] tracking-[0.6px] text-[var(--hm-muted)]">
+                      <span className="block text-[11.5px] tracking-[0.6px] text-(--hm-muted)">
                         MADE BY
                       </span>
-                      <span className="block text-[15px] font-bold text-[var(--hm-white)]">
+                      <span className="block text-[15px] font-bold text-(--hm-white)">
                         ItsMe Prince
                       </span>
                     </span>
-                    <ArrowUpRight className="h-[18px] w-[18px] text-[var(--hm-muted)]" />
+                    <ArrowUpRight className="h-4.5 w-4.5 text-(--hm-muted)" />
                   </Link>
                 </div>
                 <button
@@ -1416,7 +1594,12 @@ export function DemoSection({
               {activeTab === "list" ? (
                 <div className="space-y-3.5">
                   {renderSection("Active", "active", activeHabits, C.accent)}
-                  {renderSection("Completed", "completed", completedHabits, C.orange)}
+                  {renderSection(
+                    "Completed",
+                    "completed",
+                    completedHabits,
+                    C.orange,
+                  )}
                 </div>
               ) : (
                 <CalendarView
@@ -1433,9 +1616,9 @@ export function DemoSection({
               <button
                 type="button"
                 onClick={() => setFormHabit("new")}
-                className="flex h-[46px] items-center gap-2 rounded-[18px] bg-gradient-to-br from-[#43D17C] to-[#128A44] px-4 text-xs font-extrabold text-[#0A0E0B] shadow-[0_8px_20px_rgba(43,214,115,0.28)] transition hover:scale-[1.03] cursor-pointer"
+                className="flex h-11.5 items-center gap-2 rounded-[18px] bg-linear-to-br from-[#43D17C] to-[#128A44] px-4 text-xs font-extrabold text-[#0A0E0B] shadow-[0_8px_20px_rgba(43,214,115,0.28)] transition hover:scale-[1.03] cursor-pointer"
               >
-                <Plus className="h-4 w-4 stroke-[3]" />
+                <Plus className="h-4 w-4 stroke-3" />
                 <span>New habit</span>
               </button>
             </div>
