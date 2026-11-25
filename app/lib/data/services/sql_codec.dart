@@ -39,10 +39,15 @@ abstract final class SqlCodec {
     AppConstants.tableHabits: [
       _Column(HabitColumns.id, isText: true, required: true),
       _Column(HabitColumns.name, isText: true, required: true),
+      // Optional so backups written before notes existed still import as null.
+      _Column(HabitColumns.description, isText: true),
       _Column(HabitColumns.labelId, isText: true),
       _Column(HabitColumns.isRecurring, required: true),
       _Column(HabitColumns.recurUnit, isText: true),
       _Column(HabitColumns.recurInterval),
+      // Optional so backups written before the repeat limit existed still
+      // import as "repeats forever".
+      _Column(HabitColumns.recurCount),
       _Column(HabitColumns.notify, required: true),
       _Column(HabitColumns.isDone, required: true),
       _Column(HabitColumns.oneTimeAt),

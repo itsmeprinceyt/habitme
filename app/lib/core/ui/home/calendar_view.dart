@@ -6,7 +6,9 @@ import 'package:habit_me/core/constants/app_constants.dart';
 import 'package:habit_me/core/logic/providers.dart';
 import 'package:habit_me/core/theme/app_colors.dart';
 import 'package:habit_me/core/ui/habit_form/habit_form_sheet.dart';
+import 'package:habit_me/core/utils/calendar_heat.dart';
 import 'package:habit_me/core/utils/date_utils.dart';
+import 'package:habit_me/data/models/completion.dart';
 import 'package:habit_me/data/models/habit.dart';
 import 'package:habit_me/data/models/label.dart';
 
@@ -24,46 +26,74 @@ class _CalendarViewState extends ConsumerState<CalendarView> {
   bool _showOneTime = true;
   bool _showRecurring = true;
 
+  /// Whether the habit occurs on [day], ignoring the view filters.
+  bool _occursOn(Habit habit, DateTime day) {
+    if (habit.isRecurring) {
+      return habit.recurrence!.occursOnDate(habit.anchorAt, day);
+    }
+    final target = habit.oneTimeAt ?? habit.createdAt;
+    return AppDateUtils.isSameDay(target, day);
+  }
+
   bool _habitMatchesDate(Habit habit, DateTime day) {
     if (habit.isRecurring) {
       if (!_showRecurring) return false;
-      return habit.recurrence!.occursOnDate(habit.anchorAt, day);
-    } else {
-      if (!_showOneTime) return false;
-      final target = habit.oneTimeAt ?? habit.createdAt;
-      return AppDateUtils.isSameDay(target, day);
+    } else if (!_showOneTime) {
+      return false;
     }
+    return _occursOn(habit, day);
   }
 
+  /// Habits shown in the day list (respects the filter chips).
   List<Habit> _habitsForDay(List<Habit> allHabits, DateTime day) {
     return allHabits.where((h) => _habitMatchesDate(h, day)).toList();
   }
 
-  /// Heat tint for a day tile: light green for a single habit, deeper green
-  /// as more unique habits fall on that day.
-  Color _heatColor(int count) {
-    if (count <= 0) return Colors.transparent;
-    // Wider ten-step ramp (1..10+ habits) so busy days stay distinguishable
-    // instead of flattening out after only a handful of tasks.
-    final level = (count / 10).clamp(0.0, 1.0);
-    final alpha = 0.14 + 0.64 * level;
-    return AppColors.accent.withValues(alpha: alpha);
+  /// Habits counted for the heat (always every scheduled habit).
+  List<Habit> _allHabitsForDay(List<Habit> allHabits, DateTime day) {
+    return allHabits.where((h) => _occursOn(h, day)).toList();
   }
 
-  /// A half-rounded square day cell whose fill is the day's habit heatmap.
+  /// Completed ÷ scheduled for [day]. Filters deliberately do not apply here:
+  /// hiding a category must not change how the month reads.
+  DayProgress _progressForDay(
+    List<Habit> allHabits,
+    Map<String, Set<String>> completedByDay,
+    DateTime day,
+  ) {
+    final scheduled = _allHabitsForDay(allHabits, day);
+    final completedIds = completedByDay[dayKey(day)] ?? const <String>{};
+    final completed = scheduled
+        .where((habit) => completedIds.contains(habit.id))
+        .length;
+    return DayProgress(scheduled: scheduled.length, completed: completed);
+  }
+
+  /// A half-rounded square day cell whose fill shows how much of that day's
+  /// plan was actually completed. A scheduled day with nothing completed stays
+  /// completely blank; future days get only a neutral planned outline.
   Widget _heatDayCell({
     required DateTime day,
-    required int count,
+    required DayProgress progress,
     required bool isOutside,
   }) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final date = DateTime(day.year, day.month, day.day);
     final isSelected = isSameDay(day, _selectedDay);
-    final isToday = isSameDay(day, DateTime.now());
+    final isToday = isSameDay(day, now);
+    final isFuture = date.isAfter(today);
 
-    final heat = _heatColor(count);
-    final fill = isSelected
-        ? AppColors.accent.withValues(
-            alpha: count > 0 ? (heat.a + 0.14).clamp(0.3, 0.9) : 0.18,
-          )
+    final hasHeat = progress.completed > 0;
+    final heatAlpha = hasHeat ? 0.14 + 0.60 * progress.ratio : 0.0;
+    final glowAlpha = hasHeat ? 0.10 + 0.30 * progress.ratio : 0.0;
+    final isPlanned = isFuture && progress.hasTasks;
+
+    final heat = hasHeat
+        ? AppColors.accent.withValues(alpha: heatAlpha)
+        : Colors.transparent;
+    final fill = isSelected && hasHeat
+        ? AppColors.accent.withValues(alpha: (heatAlpha + 0.14).clamp(0.3, 0.9))
         : heat;
     final tint = isOutside ? fill.withValues(alpha: fill.a * 0.5) : fill;
 
@@ -78,52 +108,66 @@ class _CalendarViewState extends ConsumerState<CalendarView> {
         : AppColors.black;
     final textColor = isOutside ? AppColors.faint : onTile;
 
-    // Slight green glow on every filled tile, growing with the heat level.
-    final glow = count > 0
-        ? (0.14 + 0.045 * count).clamp(0.14, 0.5) * (isOutside ? 0.5 : 1.0)
-        : 0.0;
+    // Slight green glow, proportional to completion. Planned days never glow.
+    final glow = glowAlpha * (isOutside ? 0.5 : 1.0);
 
-    return Center(
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeOutCubic,
-        width: 34,
-        height: 34,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(10),
-          color: tint,
-          boxShadow: [
-            if (glow > 0)
-              BoxShadow(
-                color: AppColors.accent.withValues(alpha: glow),
-                blurRadius: 10,
-                spreadRadius: 1,
-              ),
-            if (isToday)
-              BoxShadow(
-                color: AppColors.accent.withValues(alpha: 0.55),
-                blurRadius: 14,
-                spreadRadius: 1.5,
-              ),
-            if (isSelected)
-              BoxShadow(
-                color: AppColors.white.withValues(alpha: 0.55),
-                spreadRadius: 2,
-              ),
-          ],
-        ),
-        child: Text(
-          '${day.day}',
-          style: TextStyle(
-            color: textColor,
-            fontSize: 13,
-            fontWeight: isToday || isSelected
-                ? FontWeight.w700
-                : FontWeight.w500,
-            shadows: isOutside
-                ? null
-                : const [Shadow(color: Color(0x73000000), blurRadius: 3)],
+    final semanticsLabel = progress.hasTasks
+        ? (hasHeat
+              ? '${AppDateUtils.formatShortDate(day)}, ${progress.completed} of ${progress.scheduled} habits completed'
+              : '${AppDateUtils.formatShortDate(day)}, ${progress.scheduled} scheduled, none completed yet')
+        : '${AppDateUtils.formatShortDate(day)}, no habits';
+
+    return Semantics(
+      label: semanticsLabel,
+      child: Center(
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOutCubic,
+          width: 34,
+          height: 34,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            color: tint,
+            border: isPlanned
+                ? Border.all(
+                    color: AppColors.border.withValues(
+                      alpha: isOutside ? 0.35 : 0.7,
+                    ),
+                  )
+                : null,
+            boxShadow: [
+              if (glow > 0)
+                BoxShadow(
+                  color: AppColors.accent.withValues(alpha: glow),
+                  blurRadius: 10,
+                  spreadRadius: 1,
+                ),
+              if (isToday)
+                BoxShadow(
+                  color: AppColors.accent.withValues(alpha: 0.55),
+                  blurRadius: 14,
+                  spreadRadius: 1.5,
+                ),
+              if (isSelected)
+                BoxShadow(
+                  color: AppColors.white.withValues(alpha: 0.55),
+                  spreadRadius: 2,
+                ),
+            ],
+          ),
+          child: Text(
+            '${day.day}',
+            style: TextStyle(
+              color: textColor,
+              fontSize: 13,
+              fontWeight: isToday || isSelected
+                  ? FontWeight.w700
+                  : FontWeight.w500,
+              shadows: isOutside
+                  ? null
+                  : const [Shadow(color: Color(0x73000000), blurRadius: 3)],
+            ),
           ),
         ),
       ),
@@ -137,6 +181,38 @@ class _CalendarViewState extends ConsumerState<CalendarView> {
     final labelsAsync = ref.watch(labelControllerProvider);
     final labels = labelsAsync.value ?? const <HabitLabel>[];
     final labelMap = {for (final l in labels) l.id: l};
+
+    // Unique completed habits per day; duplicate toggle rows collapse here.
+    final completions =
+        ref.watch(completionLogProvider).value ?? const <Completion>[];
+    final completedByDay = <String, Set<String>>{};
+    for (final completion in completions) {
+      completedByDay
+          .putIfAbsent(dayKey(completion.completedAt), () => <String>{})
+          .add(completion.habitId);
+    }
+
+    final now = DateTime.now();
+    final isTodaySelected = AppDateUtils.isSameDay(_selectedDay, now);
+    final isFutureSelected = DateTime(
+      _selectedDay.year,
+      _selectedDay.month,
+      _selectedDay.day,
+    ).isAfter(DateTime(now.year, now.month, now.day));
+    final selectedCompletedIds =
+        completedByDay[dayKey(_selectedDay)] ?? const <String>{};
+    final selectedProgress = _progressForDay(
+      allHabits,
+      completedByDay,
+      _selectedDay,
+    );
+    final progressLabel = !selectedProgress.hasTasks
+        ? 'No habits'
+        : isFutureSelected
+        ? '${selectedProgress.scheduled} scheduled'
+        : selectedProgress.completed > 0
+        ? '${selectedProgress.completed} of ${selectedProgress.scheduled} done · ${selectedProgress.percent}%'
+        : '0 of ${selectedProgress.scheduled} done';
 
     final selectedHabits = _habitsForDay(allHabits, _selectedDay);
     final selectedOneTime = selectedHabits.where((h) => h.isOneTime).toList();
@@ -209,33 +285,35 @@ class _CalendarViewState extends ConsumerState<CalendarView> {
               weekendTextStyle: const TextStyle(color: AppColors.white),
               outsideTextStyle: const TextStyle(color: AppColors.border),
             ),
-            // Date-wise heatmap: the more unique habits on a day, the
-            // deeper green its half-rounded square becomes.
+            // Completion heatmap: a day's shade is completed ÷ scheduled,
+            // never just how many habits were planned.
             calendarBuilders: CalendarBuilders(
               defaultBuilder: (context, day, focusedDay) => _heatDayCell(
                 day: day,
-                count: _habitsForDay(allHabits, day).length,
+                progress: _progressForDay(allHabits, completedByDay, day),
                 isOutside: false,
               ),
               todayBuilder: (context, day, focusedDay) => _heatDayCell(
                 day: day,
-                count: _habitsForDay(allHabits, day).length,
+                progress: _progressForDay(allHabits, completedByDay, day),
                 isOutside: false,
               ),
               selectedBuilder: (context, day, focusedDay) => _heatDayCell(
                 day: day,
-                count: _habitsForDay(allHabits, day).length,
+                progress: _progressForDay(allHabits, completedByDay, day),
                 isOutside: false,
               ),
               outsideBuilder: (context, day, focusedDay) => _heatDayCell(
                 day: day,
-                count: _habitsForDay(allHabits, day).length,
+                progress: _progressForDay(allHabits, completedByDay, day),
                 isOutside: true,
               ),
             ),
           ),
         ),
 
+        const SizedBox(height: 10),
+        const _HeatLegend(),
         const SizedBox(height: 12),
 
         // 2. Filter Toggles Row (Neutral stone/grey dark buttons)
@@ -307,7 +385,7 @@ class _CalendarViewState extends ConsumerState<CalendarView> {
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
-                      '${selectedHabits.length} habits',
+                      progressLabel,
                       style: const TextStyle(
                         color: AppColors.muted,
                         fontSize: 11.5,
@@ -347,6 +425,8 @@ class _CalendarViewState extends ConsumerState<CalendarView> {
                       label: habit.labelId != null
                           ? labelMap[habit.labelId]
                           : null,
+                      completedOnDay: selectedCompletedIds.contains(habit.id),
+                      allowToggle: isTodaySelected,
                     ),
                   const SizedBox(height: 10),
                 ],
@@ -362,9 +442,73 @@ class _CalendarViewState extends ConsumerState<CalendarView> {
                       label: habit.labelId != null
                           ? labelMap[habit.labelId]
                           : null,
+                      completedOnDay: selectedCompletedIds.contains(habit.id),
+                      allowToggle: isTodaySelected,
                     ),
                 ],
               ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _HeatLegend extends StatelessWidget {
+  const _HeatLegend();
+
+  @override
+  Widget build(BuildContext context) {
+    const levels = <double>[0.25, 0.5, 0.75, 1];
+    return Row(
+      children: [
+        const Text(
+          'Completion',
+          style: TextStyle(
+            color: AppColors.muted,
+            fontSize: 10.5,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.4,
+          ),
+        ),
+        const Spacer(),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: AppColors.card,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: AppColors.border.withValues(alpha: 0.6)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 12,
+                height: 12,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(3),
+                  border: Border.all(color: AppColors.border),
+                ),
+              ),
+              const SizedBox(width: 4),
+              for (final level in levels) ...[
+                Container(
+                  width: 12,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(3),
+                    color: AppColors.accent.withValues(
+                      alpha: 0.14 + 0.60 * level,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 4),
+              ],
+              const Text(
+                '100%',
+                style: TextStyle(color: AppColors.muted, fontSize: 10),
+              ),
             ],
           ),
         ),
@@ -485,17 +629,28 @@ class _CategoryHeader extends StatelessWidget {
 }
 
 class _DayHabitItem extends ConsumerWidget {
-  const _DayHabitItem({required this.habit, this.label});
+  const _DayHabitItem({
+    required this.habit,
+    this.label,
+    required this.completedOnDay,
+    required this.allowToggle,
+  });
 
   final Habit habit;
   final HabitLabel? label;
+
+  /// Completed on the selected day, not just "done right now".
+  final bool completedOnDay;
+
+  /// Only today may be toggled; history stays read-only.
+  final bool allowToggle;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeColor = label?.color != null
         ? Color(label!.color!)
         : AppColors.accentDeep;
-    final done = habit.isDone;
+    final done = completedOnDay;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
@@ -568,20 +723,34 @@ class _DayHabitItem extends ConsumerWidget {
                     ],
                   ),
                 ),
-                IconButton(
-                  tooltip: 'Toggle status',
-                  visualDensity: VisualDensity.compact,
-                  onPressed: () {
-                    ref.read(habitControllerProvider.notifier).toggle(habit.id);
-                  },
-                  icon: Icon(
-                    done
-                        ? Icons.check_circle_rounded
-                        : Icons.radio_button_unchecked_rounded,
-                    color: done ? AppColors.green : AppColors.muted,
-                    size: 22,
+                if (allowToggle)
+                  IconButton(
+                    tooltip: 'Toggle status',
+                    visualDensity: VisualDensity.compact,
+                    onPressed: () {
+                      ref
+                          .read(habitControllerProvider.notifier)
+                          .toggle(habit.id);
+                    },
+                    icon: Icon(
+                      done
+                          ? Icons.check_circle_rounded
+                          : Icons.radio_button_unchecked_rounded,
+                      color: done ? AppColors.green : AppColors.muted,
+                      size: 22,
+                    ),
+                  )
+                else
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Icon(
+                      done
+                          ? Icons.check_circle_rounded
+                          : Icons.radio_button_unchecked_rounded,
+                      color: done ? AppColors.green : AppColors.muted,
+                      size: 22,
+                    ),
                   ),
-                ),
               ],
             ),
           ),

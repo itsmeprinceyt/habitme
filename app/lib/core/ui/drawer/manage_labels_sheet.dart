@@ -106,13 +106,8 @@ class _ManageLabelsSheetState extends ConsumerState<ManageLabelsSheet> {
                       decoration: BoxDecoration(
                         color: c,
                         shape: BoxShape.circle,
-                        boxShadow: isSel
-                            ? const [
-                                BoxShadow(
-                                  color: AppColors.white,
-                                  spreadRadius: 2,
-                                ),
-                              ]
+                        border: isSel
+                            ? Border.all(color: AppColors.white, width: 2)
                             : null,
                       ),
                     ),
@@ -155,9 +150,7 @@ class _ManageLabelsSheetState extends ConsumerState<ManageLabelsSheet> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.card,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Delete label?'),
         content: Text(
           'Habits with "${label.name}" will remain, but will no longer have this label.',
@@ -190,15 +183,21 @@ class _ManageLabelsSheetState extends ConsumerState<ManageLabelsSheet> {
   Widget build(BuildContext context) {
     final labelsAsync = ref.watch(labelControllerProvider);
     final labels = labelsAsync.value ?? const <HabitLabel>[];
+    final habits = ref.watch(habitControllerProvider).value ?? const [];
+    final assignedCounts = <String, int>{};
+    for (final habit in habits) {
+      final labelId = habit.labelId;
+      if (labelId != null) {
+        assignedCounts[labelId] = (assignedCounts[labelId] ?? 0) + 1;
+      }
+    }
 
     return Dialog(
       backgroundColor: AppColors.surface,
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       elevation: 24,
       shadowColor: Colors.black,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 460, maxHeight: 600),
         child: ClipRRect(
@@ -250,7 +249,7 @@ class _ManageLabelsSheetState extends ConsumerState<ManageLabelsSheet> {
 
               // Create new label input
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -305,7 +304,7 @@ class _ManageLabelsSheetState extends ConsumerState<ManageLabelsSheet> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 14),
                     Row(
                       children: [
                         const Text(
@@ -336,13 +335,11 @@ class _ManageLabelsSheetState extends ConsumerState<ManageLabelsSheet> {
                                       decoration: BoxDecoration(
                                         color: c,
                                         shape: BoxShape.circle,
-                                        boxShadow: isSel
-                                            ? const [
-                                                BoxShadow(
-                                                  color: AppColors.white,
-                                                  spreadRadius: 2,
-                                                ),
-                                              ]
+                                        border: isSel
+                                            ? Border.all(
+                                                color: AppColors.white,
+                                                width: 2,
+                                              )
                                             : null,
                                       ),
                                     ),
@@ -377,24 +374,29 @@ class _ManageLabelsSheetState extends ConsumerState<ManageLabelsSheet> {
                         ),
                       )
                     : ListView.separated(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
-                        ),
+                        // Even breathing room above, between and below the
+                        // rows: 8 / 8 / 16 instead of 12 / 6 / 12.
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
                         itemCount: labels.length,
-                        separatorBuilder: (_, _) => const SizedBox(height: 6),
+                        separatorBuilder: (_, _) => const SizedBox(height: 8),
                         itemBuilder: (context, index) {
                           final label = labels[index];
                           final color = label.color != null
                               ? Color(label.color!)
                               : AppColors.green;
+                          final assigned = assignedCounts[label.id] ?? 0;
                           return Container(
+                            // Fixed minimum height so a long or short label
+                            // name cannot make one row taller than another.
+                            constraints: const BoxConstraints(minHeight: 56),
                             decoration: BoxDecoration(
                               color: AppColors.card,
                               borderRadius: BorderRadius.circular(12),
-                              boxShadow: AppColors.raisedShadowSmall,
+                              border: Border.all(
+                                color: AppColors.border.withValues(alpha: 0.6),
+                              ),
                             ),
-                            padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
+                            padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
                             child: Row(
                               children: [
                                 Container(
@@ -407,18 +409,41 @@ class _ManageLabelsSheetState extends ConsumerState<ManageLabelsSheet> {
                                 ),
                                 const SizedBox(width: 10),
                                 Expanded(
-                                  child: Text(
-                                    label.name,
-                                    style: const TextStyle(
-                                      color: AppColors.white,
-                                      fontSize: 14.5,
-                                      fontWeight: FontWeight.w600,
-                                    ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        label.name,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          color: AppColors.white,
+                                          fontSize: 14.5,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        '$assigned ${assigned == 1 ? 'habit' : 'habits'} assigned',
+                                        style: const TextStyle(
+                                          color: AppColors.muted,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                                 IconButton(
                                   tooltip: 'Edit',
                                   visualDensity: VisualDensity.compact,
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints.tightFor(
+                                    width: 36,
+                                    height: 36,
+                                  ),
                                   icon: const Icon(
                                     Icons.edit_outlined,
                                     size: 18,
@@ -426,9 +451,15 @@ class _ManageLabelsSheetState extends ConsumerState<ManageLabelsSheet> {
                                   ),
                                   onPressed: () => _editLabel(label),
                                 ),
+                                const SizedBox(width: 2),
                                 IconButton(
                                   tooltip: 'Delete',
                                   visualDensity: VisualDensity.compact,
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints.tightFor(
+                                    width: 36,
+                                    height: 36,
+                                  ),
                                   icon: const Icon(
                                     Icons.delete_outline_rounded,
                                     size: 18,

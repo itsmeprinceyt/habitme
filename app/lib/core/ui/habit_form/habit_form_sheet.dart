@@ -10,6 +10,13 @@ import 'package:habit_me/data/models/habit.dart';
 import 'package:habit_me/data/models/label.dart';
 import 'package:habit_me/data/models/recurrence.dart';
 
+const _sectionLabelStyle = TextStyle(
+  color: AppColors.muted,
+  fontSize: 11.5,
+  fontWeight: FontWeight.w700,
+  letterSpacing: 1.1,
+);
+
 class HabitFormSheet extends ConsumerStatefulWidget {
   const HabitFormSheet({super.key, this.habit});
 
@@ -31,6 +38,7 @@ class HabitFormSheet extends ConsumerStatefulWidget {
 class _HabitFormSheetState extends ConsumerState<HabitFormSheet> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameController;
+  late final TextEditingController _descriptionController;
   String? _selectedLabelId;
   late bool _isRecurring;
   late bool _notify;
@@ -49,6 +57,9 @@ class _HabitFormSheetState extends ConsumerState<HabitFormSheet> {
     super.initState();
     final habit = widget.habit;
     _nameController = TextEditingController(text: habit?.name ?? '');
+    _descriptionController = TextEditingController(
+      text: habit?.description ?? '',
+    );
     _selectedLabelId = habit?.labelId;
     _isRecurring = habit?.isRecurring ?? true;
     _notify = habit?.notify ?? true;
@@ -64,6 +75,7 @@ class _HabitFormSheetState extends ConsumerState<HabitFormSheet> {
   @override
   void dispose() {
     _nameController.dispose();
+    _descriptionController.dispose();
     super.dispose();
   }
 
@@ -197,12 +209,18 @@ class _HabitFormSheetState extends ConsumerState<HabitFormSheet> {
     if (!_formKey.currentState!.validate()) return;
 
     final name = _nameController.text.trim();
+    final description = _descriptionController.text.trim();
     final now = DateTime.now();
     final oneTimeAt = _minuteOf(_oneTimeAt);
     final recurringAt = _minuteOf(_recurringAt);
     final recurrence = _isRecurring ? _recurrence : null;
 
-    if (_isRecurring && recurrence == null) return;
+    if (_isRecurring && recurrence == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter how often this habit repeats.')),
+      );
+      return;
+    }
     if (!_isRecurring && _notify && !oneTimeAt.isAfter(now)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -228,6 +246,7 @@ class _HabitFormSheetState extends ConsumerState<HabitFormSheet> {
       if (existing == null) {
         final habit = Habit.create(
           name: name,
+          description: description,
           labelId: _selectedLabelId,
           recurrence: recurrence,
           notify: _notify,
@@ -237,9 +256,9 @@ class _HabitFormSheetState extends ConsumerState<HabitFormSheet> {
         );
         await ref.read(habitControllerProvider.notifier).add(habit);
       } else {
-        final recurrenceChanged =
-            existing.recurrence?.unit != recurrence?.unit ||
-            existing.recurrence?.interval != recurrence?.interval;
+        // Compared as a whole so changing only the repeat limit also re-arms
+        // the schedule from the current start time.
+        final recurrenceChanged = existing.recurrence != recurrence;
 
         final typeChanged = existing.isRecurring != _isRecurring;
         final anchorChanged =
@@ -256,6 +275,7 @@ class _HabitFormSheetState extends ConsumerState<HabitFormSheet> {
 
         final updated = existing.copyWith(
           name: name,
+          description: () => description.isEmpty ? null : description,
           labelId: () => _selectedLabelId,
           recurrence: () => recurrence,
           notify: _notify,
@@ -481,6 +501,59 @@ class _HabitFormSheetState extends ConsumerState<HabitFormSheet> {
                         ),
                         const SizedBox(height: 14),
 
+                        // Optional note shown on the expanded habit tile
+                        const Text(
+                          'DESCRIPTION / NOTES (OPTIONAL)',
+                          style: TextStyle(
+                            color: AppColors.muted,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 1.1,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        TextFormField(
+                          controller: _descriptionController,
+                          minLines: 2,
+                          maxLines: 4,
+                          maxLength: 300,
+                          textCapitalization: TextCapitalization.sentences,
+                          style: const TextStyle(
+                            color: AppColors.white,
+                            fontSize: 14,
+                          ),
+                          decoration: InputDecoration(
+                            hintText:
+                                'Why this matters, or a short reminder note',
+                            hintStyle: const TextStyle(
+                              color: AppColors.muted,
+                              fontSize: 13,
+                            ),
+                            filled: true,
+                            fillColor: AppColors.card,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 12,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(
+                                color: AppColors.accentDeep,
+                                width: 1.4,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+
                         // Label selection row
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -594,45 +667,93 @@ class _HabitFormSheetState extends ConsumerState<HabitFormSheet> {
 
                         // Time & Schedule Section
                         if (_isRecurring) ...[
-                          const Text(
-                            'HOW OFTEN DOES IT REPEAT?',
-                            style: TextStyle(
-                              color: AppColors.muted,
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 1.1,
+                          Container(
+                            padding: const EdgeInsets.fromLTRB(14, 12, 14, 4),
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceLight,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: AppColors.border),
                             ),
-                          ),
-                          const SizedBox(height: 8),
-                          RecurrencePicker(
-                            key: ValueKey(_recurrence),
-                            initialValue: _recurrence,
-                            onChanged: (value) => _recurrence = value,
-                          ),
-                          const SizedBox(height: 16),
-                          const Text(
-                            'FIRST OCCURRENCE / START TIME',
-                            style: TextStyle(
-                              color: AppColors.muted,
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 1.1,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.repeat_rounded,
+                                      size: 15,
+                                      color: AppColors.accent,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    const Text(
+                                      'REPEAT',
+                                      style: _sectionLabelStyle,
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                RecurrencePicker(
+                                  initialValue: _recurrence,
+                                  onChanged: (value) {
+                                    setState(() => _recurrence = value);
+                                  },
+                                ),
+                                const Padding(
+                                  padding: EdgeInsets.only(top: 14),
+                                  child: Divider(
+                                    height: 1,
+                                    thickness: 1,
+                                    color: AppColors.border,
+                                  ),
+                                ),
+                                InkWell(
+                                  borderRadius: BorderRadius.circular(10),
+                                  onTap: _pickRecurringDateTime,
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 12,
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        const Icon(
+                                          Icons.event_rounded,
+                                          size: 15,
+                                          color: AppColors.accent,
+                                        ),
+                                        const SizedBox(width: 6),
+                                        const Text(
+                                          'STARTS',
+                                          style: _sectionLabelStyle,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            DateFormat(
+                                              'EEE, d MMM · hh:mm a',
+                                            ).format(_recurringAt),
+                                            style: const TextStyle(
+                                              color: AppColors.white,
+                                              fontSize: 12.5,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ),
+                                        const Icon(
+                                          Icons.edit_calendar_outlined,
+                                          size: 16,
+                                          color: AppColors.muted,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
-                          const SizedBox(height: 8),
-                          _DateTimeButton(
-                            dateTime: _recurringAt,
-                            onTap: _pickRecurringDateTime,
                           ),
                         ] else ...[
                           const Text(
                             'SCHEDULED TIME',
-                            style: TextStyle(
-                              color: AppColors.muted,
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 1.1,
-                            ),
+                            style: _sectionLabelStyle,
                           ),
                           const SizedBox(height: 8),
                           _DateTimeButton(
@@ -652,7 +773,7 @@ class _HabitFormSheetState extends ConsumerState<HabitFormSheet> {
                           decoration: BoxDecoration(
                             color: AppColors.card,
                             borderRadius: BorderRadius.circular(12),
-                            boxShadow: AppColors.raisedShadowSmall,
+                            border: Border.all(color: AppColors.border),
                           ),
                           child: Row(
                             children: [
@@ -818,15 +939,11 @@ class _HabitFormSheetState extends ConsumerState<HabitFormSheet> {
               ? (color ?? AppColors.accent).withValues(alpha: 0.14)
               : AppColors.card,
           borderRadius: BorderRadius.circular(8),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: (color ?? AppColors.accent).withValues(alpha: 0.28),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : AppColors.raisedShadowSmall,
+          border: Border.all(
+            color: isSelected
+                ? (color ?? AppColors.accent).withValues(alpha: 0.55)
+                : AppColors.border,
+          ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -885,15 +1002,11 @@ class _TypeSelectionCard extends StatelessWidget {
               ? AppColors.accent.withValues(alpha: 0.08)
               : AppColors.card,
           borderRadius: BorderRadius.circular(12),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: AppColors.accent.withValues(alpha: 0.3),
-                    blurRadius: 14,
-                    offset: const Offset(0, 4),
-                  ),
-                ]
-              : AppColors.raisedShadowSmall,
+          border: Border.all(
+            color: isSelected
+                ? AppColors.accent.withValues(alpha: 0.45)
+                : AppColors.border,
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -953,7 +1066,7 @@ class _DateTimeButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.card,
           borderRadius: BorderRadius.circular(12),
-          boxShadow: AppColors.raisedShadowSmall,
+          border: Border.all(color: AppColors.border),
         ),
         child: Row(
           children: [

@@ -21,16 +21,47 @@ enum RecurUnit {
 }
 
 class Recurrence {
-  const Recurrence({required this.unit, required this.interval})
-    : assert(interval > 0);
+  const Recurrence({required this.unit, required this.interval, this.count})
+    : assert(interval > 0),
+      assert(count == null || count > 0);
 
   final RecurUnit unit;
   final int interval;
 
+  /// Total number of occurrences the habit repeats for. `null` means it keeps
+  /// repeating forever, which is how every habit saved before the limit
+  /// existed is read.
+  final int? count;
+
+  bool get isLimited => count != null;
+
+  Recurrence withCount(int? count) =>
+      count == null || count < 1
+      ? Recurrence(unit: unit, interval: interval)
+      : Recurrence(unit: unit, interval: interval, count: count);
+
   String get label {
-    if (interval == 1) return 'Every ${unit.singular}';
-    return 'Every $interval ${unit.label.toLowerCase()}';
+    final base = interval == 1
+        ? 'Every ${unit.singular}'
+        : 'Every $interval ${unit.label.toLowerCase()}';
+    final total = count;
+    if (total == null) return base;
+    return '$base · $total ${total == 1 ? 'time' : 'times'}';
   }
+
+  @override
+  bool operator ==(Object other) =>
+      other is Recurrence &&
+      other.unit == unit &&
+      other.interval == interval &&
+      other.count == count;
+
+  @override
+  int get hashCode => Object.hash(unit, interval, count);
+
+  @override
+  String toString() =>
+      'Recurrence(${unit.name}, every $interval, count: $count)';
 
   /// Truncates to minute precision — schedules never carry seconds.
   static DateTime minuteOf(DateTime dt) =>
@@ -59,13 +90,42 @@ class Recurrence {
     }
   }
 
-  DateTime nextAfter(DateTime anchor, DateTime now) {
-    return occurrence(anchor, _nextIndex(anchor, now));
+  /// The next occurrence strictly after [now], or `null` when the series has
+  /// already produced all of its occurrences.
+  DateTime? nextAfter(DateTime anchor, DateTime now) {
+    final index = _nextIndex(anchor, now);
+    final total = count;
+    if (total != null && index >= total) return null;
+    return occurrence(anchor, index);
   }
 
-  List<DateTime> upcoming(DateTime anchor, DateTime now, int count) {
+  /// Upcoming occurrences after [now], never more than the remaining repeat
+  /// count allows.
+  List<DateTime> upcoming(DateTime anchor, DateTime now, int take) {
     final start = _nextIndex(anchor, now);
-    return List.generate(count, (i) => occurrence(anchor, start + i));
+    final total = count;
+    final available = total == null ? take : max(0, total - start);
+    if (available <= 0) return const [];
+    return List.generate(
+      min(take, available),
+      (i) => occurrence(anchor, start + i),
+    );
+  }
+
+  /// How many occurrences are still ahead of [now], or `null` when there is no
+  /// limit. Counts the occurrence starting exactly at [now] as still ahead.
+  int? remaining(DateTime anchor, DateTime now) {
+    final total = count;
+    if (total == null) return null;
+    final used = _elapsedOccurrences(anchor, now);
+    final left = total - used;
+    return left < 0 ? 0 : left;
+  }
+
+  /// Whether the rule has produced every occurrence it ever will.
+  bool isFinished(DateTime anchor, DateTime now) {
+    final total = count;
+    return total != null && _nextIndex(anchor, now) >= total;
   }
 
   /// Checks if an occurrence lands on the given calendar date (ignoring hour/min).
@@ -84,18 +144,22 @@ class Recurrence {
     switch (unit) {
       case RecurUnit.minutes:
       case RecurUnit.hours:
-        // Intraday recurrence: occurs every day from anchor onward
+        // Intraday recurrence: occurs every day from anchor onward. A repeat
+        // count limits the schedule, but a single day can still hold several
+        // occurrences, so the per-day calendar stays as it was.
         return true;
 
       case RecurUnit.days:
         final diffDays = targetStartOfDay.difference(anchorStartOfDay).inDays;
-        return diffDays >= 0 && (diffDays % _step == 0);
+        if (diffDays < 0 || (diffDays % _step != 0)) return false;
+        return _withinLimit(diffDays ~/ _step);
 
       case RecurUnit.months:
         final totalMonths =
             (targetDate.year - anchor.year) * 12 +
             (targetDate.month - anchor.month);
         if (totalMonths < 0 || totalMonths % _step != 0) return false;
+        if (!_withinLimit(totalMonths ~/ _step)) return false;
         // Check day match (with clamped last-day-of-month logic)
         final lastDay = DateTime(targetDate.year, targetDate.month + 1, 0).day;
         final expectedDay = min(anchor.day, lastDay);
@@ -104,11 +168,17 @@ class Recurrence {
       case RecurUnit.years:
         final yearDiff = targetDate.year - anchor.year;
         if (yearDiff < 0 || yearDiff % _step != 0) return false;
+        if (!_withinLimit(yearDiff ~/ _step)) return false;
         if (targetDate.month != anchor.month) return false;
         final lastDay = DateTime(targetDate.year, targetDate.month + 1, 0).day;
         final expectedDay = min(anchor.day, lastDay);
         return targetDate.day == expectedDay;
     }
+  }
+
+  bool _withinLimit(int index) {
+    final total = count;
+    return total == null || index < total;
   }
 
   int _nextIndex(DateTime anchor, DateTime now) {
@@ -120,6 +190,22 @@ class Recurrence {
     }
 
     return index;
+  }
+
+  /// Number of occurrences that have already started strictly before [now].
+  /// An occurrence landing exactly on [now] still counts as remaining.
+  int _elapsedOccurrences(DateTime anchor, DateTime now) {
+    if (!now.isAfter(anchor)) return 0;
+
+    var index = max(0, _estimate(anchor, now));
+    while (index > 0 && !occurrence(anchor, index).isBefore(now)) {
+      index--;
+    }
+    if (!occurrence(anchor, index).isBefore(now)) return 0;
+    while (occurrence(anchor, index + 1).isBefore(now)) {
+      index++;
+    }
+    return index + 1;
   }
 
   int _estimate(DateTime anchor, DateTime now) {

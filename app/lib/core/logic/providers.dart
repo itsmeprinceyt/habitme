@@ -1,7 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:habit_me/core/constants/app_constants.dart';
 import 'package:habit_me/core/logic/habit_controller.dart';
 import 'package:habit_me/core/logic/label_controller.dart';
 import 'package:habit_me/data/db/app_database.dart';
+import 'package:habit_me/data/models/completion.dart';
 import 'package:habit_me/data/models/habit.dart';
 import 'package:habit_me/data/models/label.dart';
 import 'package:habit_me/data/repositories/habit_repository.dart';
@@ -57,6 +59,20 @@ final completedHabitsProvider = Provider<List<Habit>>((ref) {
         (b.completedAt ?? b.updatedAt).compareTo(a.completedAt ?? a.updatedAt),
   );
   return done;
+});
+
+/// Completion history used by the calendar heatmap.
+///
+/// Watching [habitControllerProvider] means any toggle, edit, delete or import
+/// reloads the log, so a day's shade can never go stale.
+final completionLogProvider = FutureProvider<List<Completion>>((ref) {
+  ref.watch(habitControllerProvider);
+  return ref
+      .read(habitRepositoryProvider)
+      .completionsInRange(
+        DateTime(AppConstants.calendarFirstYear, 1, 1),
+        DateTime(AppConstants.calendarLastYear + 1, 1, 1),
+      );
 });
 
 final habitSchedulerProvider = Provider<HabitScheduler>((ref) {

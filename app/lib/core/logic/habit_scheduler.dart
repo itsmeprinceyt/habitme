@@ -39,10 +39,13 @@ class HabitScheduler {
       final due = habit.nextDueAt;
 
       if (recurrence != null && due != null && !due.isAfter(now)) {
+        // A limited series hands back null once its last occurrence has
+        // passed: stop rolling it forward instead of restarting the countdown.
+        final next = recurrence.nextAfter(habit.anchorAt, now);
         final updated = habit.copyWith(
-          isDone: false,
-          completedAt: () => null,
-          nextDueAt: () => recurrence.nextAfter(habit.anchorAt, now),
+          isDone: next == null ? habit.isDone : false,
+          completedAt: () => next == null ? habit.completedAt : null,
+          nextDueAt: () => next,
           updatedAt: now,
         );
 
@@ -81,10 +84,13 @@ class HabitScheduler {
 
       final recurrence = habit.recurrence;
       if (recurrence != null) {
-        final nextAt = _toMinute(recurrence.nextAfter(habit.anchorAt, firedAt));
-        if (nextAt.isAfter(firedAt)) {
-          final reminder = _makeReminder(habit, nextAt);
-          await _notifications.scheduleOne(reminder);
+        final next = recurrence.nextAfter(habit.anchorAt, firedAt);
+        if (next != null) {
+          final nextAt = _toMinute(next);
+          if (nextAt.isAfter(firedAt)) {
+            final reminder = _makeReminder(habit, nextAt);
+            await _notifications.scheduleOne(reminder);
+          }
         }
       }
     } catch (e, stackTrace) {
