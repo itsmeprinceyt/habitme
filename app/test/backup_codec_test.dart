@@ -24,7 +24,11 @@ void main() {
     name: 'Drink (2L) water, 💧',
     description: 'Two litres before lunch',
     labelId: 'label-1',
-    recurrence: const Recurrence(unit: RecurUnit.minutes, interval: 30),
+    recurrence: const Recurrence(
+      unit: RecurUnit.minutes,
+      interval: 30,
+      count: 12,
+    ),
     notify: true,
     isDone: false,
     oneTimeAt: null,
@@ -75,6 +79,12 @@ void main() {
         parsed.habits.first[HabitColumns.description],
         'Two litres before lunch',
       );
+      expect(parsed.habits.first[HabitColumns.recurCount], 12);
+      expect(
+        Habit.fromMap(parsed.habits.first).recurrence?.count,
+        12,
+        reason: 'the repeat limit must survive a backup round trip',
+      );
       // The autoincrement id belongs to the database, not to the backup.
       expect(parsed.completions, [
         {
@@ -104,6 +114,7 @@ void main() {
         HabitColumns.isRecurring,
         HabitColumns.recurUnit,
         HabitColumns.recurInterval,
+        HabitColumns.recurCount,
         HabitColumns.notify,
         HabitColumns.isDone,
         HabitColumns.oneTimeAt,
@@ -158,6 +169,8 @@ void main() {
       final parsed = SqlCodec.decode(text);
       expect(parsed.habits.single[HabitColumns.description], isNull);
       expect(Habit.fromMap(parsed.habits.single).description, isNull);
+      expect(parsed.habits.single[HabitColumns.recurCount], isNull);
+      expect(Habit.fromMap(parsed.habits.single).recurrence?.count, isNull);
     });
 
     test('CRLF line endings and INSERT OR REPLACE still parse', () {

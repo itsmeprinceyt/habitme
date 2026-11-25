@@ -249,7 +249,7 @@ class _ManageLabelsSheetState extends ConsumerState<ManageLabelsSheet> {
 
               // Create new label input
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -304,7 +304,7 @@ class _ManageLabelsSheetState extends ConsumerState<ManageLabelsSheet> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 14),
                     Row(
                       children: [
                         const Text(
@@ -374,12 +374,11 @@ class _ManageLabelsSheetState extends ConsumerState<ManageLabelsSheet> {
                         ),
                       )
                     : ListView.separated(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
-                        ),
+                        // Even breathing room above, between and below the
+                        // rows: 8 / 8 / 16 instead of 12 / 6 / 12.
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
                         itemCount: labels.length,
-                        separatorBuilder: (_, _) => const SizedBox(height: 6),
+                        separatorBuilder: (_, _) => const SizedBox(height: 8),
                         itemBuilder: (context, index) {
                           final label = labels[index];
                           final color = label.color != null
@@ -387,6 +386,9 @@ class _ManageLabelsSheetState extends ConsumerState<ManageLabelsSheet> {
                               : AppColors.green;
                           final assigned = assignedCounts[label.id] ?? 0;
                           return Container(
+                            // Fixed minimum height so a long or short label
+                            // name cannot make one row taller than another.
+                            constraints: const BoxConstraints(minHeight: 56),
                             decoration: BoxDecoration(
                               color: AppColors.card,
                               borderRadius: BorderRadius.circular(12),
@@ -394,7 +396,7 @@ class _ManageLabelsSheetState extends ConsumerState<ManageLabelsSheet> {
                                 color: AppColors.border.withValues(alpha: 0.6),
                               ),
                             ),
-                            padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
+                            padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
                             child: Row(
                               children: [
                                 Container(
@@ -414,6 +416,8 @@ class _ManageLabelsSheetState extends ConsumerState<ManageLabelsSheet> {
                                     children: [
                                       Text(
                                         label.name,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
                                         style: const TextStyle(
                                           color: AppColors.white,
                                           fontSize: 14.5,
@@ -435,6 +439,11 @@ class _ManageLabelsSheetState extends ConsumerState<ManageLabelsSheet> {
                                 IconButton(
                                   tooltip: 'Edit',
                                   visualDensity: VisualDensity.compact,
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints.tightFor(
+                                    width: 36,
+                                    height: 36,
+                                  ),
                                   icon: const Icon(
                                     Icons.edit_outlined,
                                     size: 18,
@@ -442,9 +451,15 @@ class _ManageLabelsSheetState extends ConsumerState<ManageLabelsSheet> {
                                   ),
                                   onPressed: () => _editLabel(label),
                                 ),
+                                const SizedBox(width: 2),
                                 IconButton(
                                   tooltip: 'Delete',
                                   visualDensity: VisualDensity.compact,
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints.tightFor(
+                                    width: 36,
+                                    height: 36,
+                                  ),
                                   icon: const Icon(
                                     Icons.delete_outline_rounded,
                                     size: 18,

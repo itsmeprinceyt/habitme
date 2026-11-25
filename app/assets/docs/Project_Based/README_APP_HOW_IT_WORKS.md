@@ -9,7 +9,7 @@
 
 ## 1. Data Model
 
-SQLite database `habitme.db`, schema version 2, foreign keys on.
+SQLite database `habitme.db`, schema version 4, foreign keys on.
 
 ### `labels`
 `id TEXT PK`, `name TEXT NOT NULL`, `color INTEGER` (ARGB), `created_at INTEGER`.
@@ -17,8 +17,10 @@ SQLite database `habitme.db`, schema version 2, foreign keys on.
 ### `habits`
 `id TEXT PK`, `name TEXT NOT NULL`, `label_id TEXT` (FK → labels, `ON DELETE SET NULL`),
 `is_recurring INTEGER`, `recur_unit TEXT`, `recur_interval INTEGER`,
-`notify INTEGER`, `is_done INTEGER`, `one_time_at INTEGER`, `anchor_at INTEGER NOT NULL`,
-`next_due_at INTEGER`, `completed_at INTEGER`, `created_at INTEGER`, `updated_at INTEGER`.
+`description TEXT` (optional note, max 300 in the form), `recur_count INTEGER`
+(nullable total occurrences), `notify INTEGER`, `is_done INTEGER`,
+`one_time_at INTEGER`, `anchor_at INTEGER NOT NULL`, `next_due_at INTEGER`,
+`completed_at INTEGER`, `created_at INTEGER`, `updated_at INTEGER`.
 Index on `label_id`.
 
 ### `completions`
@@ -30,9 +32,12 @@ Notes:
   whole minute** (seconds/millis always zero) before storage or arming.
 - `anchor_at` is the recurrence origin. `next_due_at` is the cached next
   occurrence for recurring habits.
-- Migration v1→v2 adds `labels` and `habits.label_id`. `ALTER TABLE` cannot add
-  the foreign key, so upgraded databases may hold a dangling `label_id`; the
-  backup importer nulls unknown labels instead of relying on the constraint.
+- Migrations: v1→v2 adds `labels` and `habits.label_id`; v2→v3 adds
+  `habits.description`; v3→v4 adds `habits.recur_count`. All new columns are
+  nullable, so upgraded habits keep their schedule (no note, repeat forever).
+  `ALTER TABLE` cannot add the foreign key, so upgraded databases may hold a
+  dangling `label_id`; the backup importer nulls unknown labels instead of
+  relying on the constraint.
 - Models tolerate rough data on read: `Habit.fromMap` treats booleans as
   `1`/`true`, parses text epochs, and downgrades a zero/negative interval to a
   one-time habit instead of throwing. `HabitRepository.getAll` skips a single
@@ -42,32 +47,44 @@ Notes:
 
 ## 2. Recurrence
 
-`Recurrence(unit, interval)` with `RecurUnit = minutes | hours | days | months | years`
-and `interval > 0` (asserted; internally floored at 1 by `_step`).
+`Recurrence(unit, interval, count?)` with
+`RecurUnit = minutes | hours | days | months | years`, `interval > 0`
+(asserted; internally floored at 1 by `_step`) and optional `count > 0`
+(asserted; `withCount(<= 0)` normalises to null = forever).
 
 - `occurrence(anchor, index)` = anchor + `interval × index` steps.
   Days use calendar arithmetic (`DateTime(y, m, d + n)`), months/years go through
   `_addMonths`, which clamps to the last day of the target month
   (Jan 31 + 1 month → Feb 28/29).
-- `nextAfter(anchor, now)` returns the first occurrence **strictly after** now;
-  a boundary time advances to the following occurrence. It estimates the index
+- `nextAfter(anchor, now)` returns the first occurrence **strictly after** now,
+  or **`null` once a limited series has produced all `count` occurrences**. A
+  boundary time advances to the following occurrence. It estimates the index
   from the elapsed duration/month count, then walks forward until the occurrence
   is in the future.
-- `upcoming(anchor, now, count)` returns the next `count` occurrences.
+- `upcoming(anchor, now, take)` returns the next `take` occurrences, capped by
+  what is left of the repeat count.
+- `remaining(anchor, now)` = `count - elapsed` (null when unlimited, floored at
+  0); an occurrence starting exactly at `now` still counts as remaining.
+  `isFinished(anchor, now)` is true once `nextAfter` would exceed the count.
+  `isLimited` reports whether a count is set.
 - `occursOnDate(anchor, target)` decides calendar membership:
   - minutes/hours: every day from the anchor day onward,
   - days: day difference divisible by the interval,
   - months/years: month/year difference divisible by the interval and the day
     matches the anchor day (clamped to month end).
 - `label`: "Every day" / "Every 3 days" / "Every hour" (singular vs plural).
+- `occursOnDate` also respects the count for days/months/years so calendar
+  days after the last occurrence are not painted as scheduled.
 
 ---
 
 ## 3. Habit Lifecycle
 
-**Create** (`Habit.create`): UUID v4 id, trimmed name, `isDone = false`, anchor
-and timestamps truncated to the minute, `nextDueAt = recurrence.nextAfter(anchor, now)`;
-`oneTimeAt` is only kept for non-recurring habits.
+**Create** (`Habit.create`): UUID v4 id, trimmed name and description,
+`isDone = false`, anchor and timestamps truncated to the minute,
+`nextDueAt = recurrence.nextAfter(anchor, now)`; `oneTimeAt` is only kept for
+non-recurring habits. The form's optional repeat count is stored in
+`recur_count`, which becomes `Recurrence.count`.
 
 **Toggle done** (`HabitRepository.toggleDone`, used by `HabitController.toggle`):
 - writes `is_done`, `completed_at`, `next_due_at`
@@ -80,7 +97,10 @@ and timestamps truncated to the minute, `nextDueAt = recurrence.nextAfter(anchor
 **Roll forward** (`HabitScheduler.reconcile`): on startup and every resume, any
 recurring habit whose `next_due_at` (`nextDueAt`) is `<= now` is reset to active
 (`isDone = false`, `completedAt = null`) and given the next future occurrence.
-This is what makes a missed day reset the habit instead of leaving it stuck.
+A limited series whose `nextAfter` returns `null` is **not** restarted: its
+`next_due_at` becomes null and it leaves the active rotation. This is what
+makes a missed day reset an ongoing habit without resurrecting a finished
+series.
 
 **Foreground ticker** (`app.dart`): a one-shot `Timer` waits until the soonest
 `nextDueAt + 300ms` (floor 2s, ceiling 5min) and calls `refreshDue()`, which
@@ -91,10 +111,10 @@ habit-list change via `ref.listen`, and on timer/if backgrounded simply re-arms
 **Delete**: removes the habit row; completions cascade. Reminder plan is
 re-synced, so its alarms disappear from the OS.
 
-**Update** (`HabitFormSheet`): if type, recurrence unit/interval, or the
-recurring start time changed, the schedule resets (`nextDueAt` recomputed,
-done/completed cleared). Otherwise `nextDueAt` is preserved so editing a name or
-label does not move the countdown.
+**Update** (`HabitFormSheet`): if type, recurrence unit/interval/count, or the
+recurring start time changed, the schedule resets (`nextDueAt` computed from the
+anchor, done/completed cleared). Otherwise `nextDueAt` is preserved so editing a
+name, label or description does not move the countdown.
 
 ---
 
@@ -109,7 +129,7 @@ Constants: `perHabitCap = 40` (bounds `Recurrence.upcoming`),
 2. **Reservation pass** — take exactly the first upcoming occurrence of each
    notifying habit. One-time habits contribute their `one_time_at` only when not
    done and strictly in the future; a recurring habit with no future occurrence
-   contributes nothing.
+   (including a finished limited series) contributes nothing.
 3. If reservations exceed `globalCap`, keep the first 60 by priority:
    not-done before done, then earliest time, then `habitId`.
 4. Otherwise share the remaining budget fairly: sort the overflow occurrences
@@ -134,8 +154,9 @@ available (survives Doze), otherwise `inexactAllowWhileIdle`. A rejected exact
 schedule is logged and retried inexactly.
 
 `onReminderFired(habitId, firedAt)`: for a recurring habit, schedules just the
-next occurrence (`scheduleOne`) without replacing the queue. One-time habits
-schedule nothing further.
+next occurrence (`scheduleOne`) without replacing the queue; a limited series
+that has reached its count schedules nothing further. One-time habits schedule
+nothing further.
 
 ---
 
@@ -159,8 +180,11 @@ schedule nothing further.
   signature so alarms scheduled while denied are re-armed.
 - Boot/update: the plugin's boot receiver restores pending alarms, and the app's
   next reconcile re-plans from the database.
+- Seen reminders: `clearDelivered()` runs on launch and again on resume, so the
+  notification shade only keeps reminders the user has not looked at yet. The
+  in-app Guide page explains this instead of warning about the OS limit.
 - Reminder limit: at most 60 are held by the OS at a time; opening the app
-  refreshes the window (documented in the Guide page).
+  refreshes the window.
 
 ---
 

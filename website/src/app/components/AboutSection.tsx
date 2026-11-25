@@ -9,7 +9,7 @@ export function AboutSection() {
     <section id="about" className="py-24 px-6 sm:px-10">
       <div className="max-w-7xl mx-auto">
         {/* Why HabitMe exists — mirrors the app's Guide page */}
-        <div className="text-center max-w-3xl mx-auto mb-16">
+        <div data-reveal className="text-center max-w-3xl mx-auto mb-16">
           <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#22C55E]">
             Why HabitMe Exists
           </span>
@@ -29,7 +29,10 @@ export function AboutSection() {
           </p>
         </div>
 
-        <div className="p-10 sm:p-16 rounded-3xl bg-linear-to-b from-[#141414] to-[#0D0D0D] border border-[#262626] relative overflow-hidden text-center flex flex-col items-center">
+        <div
+          data-reveal
+          className="p-10 sm:p-16 rounded-3xl bg-linear-to-b from-[#141414] to-[#0D0D0D] border border-[#262626] relative overflow-hidden text-center flex flex-col items-center"
+        >
           <div className="w-16 h-16 rounded-2xl bg-black border border-[#262626] p-2 flex items-center justify-center mb-6 shadow-xl">
             <Image
               src="/habitme_logo_svg.svg"

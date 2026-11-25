@@ -407,4 +407,59 @@ void main() {
       expect(notifications.scheduledSingles, isEmpty);
     },
   );
+
+  test('a finished limited series stops rolling and arms nothing', () async {
+    final limited = Habit(
+      id: 'limited',
+      name: 'Three days only',
+      recurrence: const Recurrence(
+        unit: RecurUnit.days,
+        interval: 1,
+        count: 3,
+      ),
+      notify: true,
+      isDone: false,
+      oneTimeAt: null,
+      anchorAt: DateTime(2026, 11, 1, 9, 0),
+      nextDueAt: DateTime(2026, 11, 3, 9, 0),
+      completedAt: null,
+      createdAt: DateTime(2026, 11, 1, 9, 0),
+      updatedAt: DateTime(2026, 11, 1, 9, 0),
+    );
+    await repo.insert(limited);
+
+    await scheduler.reconcileAndSync(now);
+
+    expect(repo.habits['limited']!.nextDueAt, isNull);
+    expect(notifications.lastReplaced, isEmpty);
+
+    // A late "fired" callback must not re-arm it either.
+    await scheduler.onReminderFired('limited', now);
+    expect(notifications.scheduledSingles, isEmpty);
+  });
+
+  test('a limited series only plans the occurrences it has left', () {
+    final limited = Habit(
+      id: 'limited',
+      name: 'Two days',
+      recurrence: const Recurrence(
+        unit: RecurUnit.days,
+        interval: 1,
+        count: 2,
+      ),
+      notify: true,
+      isDone: false,
+      oneTimeAt: null,
+      anchorAt: now,
+      nextDueAt: now.add(const Duration(days: 1)),
+      completedAt: null,
+      createdAt: now,
+      updatedAt: now,
+    );
+
+    final plan = scheduler.planForTest([limited], now);
+
+    expect(plan.length, 1);
+    expect(plan.single.at, now.add(const Duration(days: 1)));
+  });
 }

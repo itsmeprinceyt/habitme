@@ -5,7 +5,7 @@ export function FeaturesSection() {
   return (
     <section id="features" className="py-24 px-6 sm:px-10">
       <div className="max-w-7xl mx-auto">
-        <div className="text-center mb-16">
+        <div data-reveal className="text-center mb-16">
           <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight mb-4">
             Built so a break never breaks the habit.
           </h2>
@@ -18,7 +18,10 @@ export function FeaturesSection() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Feature 1 */}
-          <div className="p-8 rounded-3xl bg-[#0D0D0D] border border-[#262626] hover:border-[#383838] transition flex flex-col justify-between">
+          <div
+            data-feature-card
+            className="p-8 rounded-3xl bg-[#0D0D0D] border border-[#262626] hover:border-[#383838] hover:-translate-y-1 transition duration-300 flex flex-col justify-between"
+          >
             <div>
               <div className="w-12 h-12 rounded-2xl bg-[#141414] border border-[#262626] flex items-center justify-center mb-6 text-[#22C55E]">
                 <Zap className="w-6 h-6" />
@@ -39,7 +42,10 @@ export function FeaturesSection() {
           </div>
 
           {/* Feature 2 */}
-          <div className="p-8 rounded-3xl bg-[#0D0D0D] border border-[#262626] hover:border-[#383838] transition flex flex-col justify-between">
+          <div
+            data-feature-card
+            className="p-8 rounded-3xl bg-[#0D0D0D] border border-[#262626] hover:border-[#383838] hover:-translate-y-1 transition duration-300 flex flex-col justify-between"
+          >
             <div>
               <div className="w-12 h-12 rounded-2xl bg-[#141414] border border-[#262626] flex items-center justify-center mb-6 text-[#FF8A00]">
                 <ShieldCheck className="w-6 h-6" />
@@ -60,7 +66,10 @@ export function FeaturesSection() {
           </div>
 
           {/* Feature 3 */}
-          <div className="p-8 rounded-3xl bg-[#0D0D0D] border border-[#262626] hover:border-[#383838] transition flex flex-col justify-between">
+          <div
+            data-feature-card
+            className="p-8 rounded-3xl bg-[#0D0D0D] border border-[#262626] hover:border-[#383838] hover:-translate-y-1 transition duration-300 flex flex-col justify-between"
+          >
             <div>
               <div className="w-12 h-12 rounded-2xl bg-[#141414] border border-[#262626] flex items-center justify-center mb-6 text-white">
                 <Database className="w-6 h-6" />

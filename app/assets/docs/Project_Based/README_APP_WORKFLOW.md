@@ -19,10 +19,11 @@
 
 ### Create a habit
 1. FAB **New habit** → `HabitFormSheet.show()`.
-2. Enter title (required), optionally pick or create a label, choose
-   Recurring / One-Time.
-3. Recurring: choose a preset or "Every N units" and the first occurrence.
-   One-Time: pick date + time.
+2. Enter title (required), optionally a description/note, pick or create a
+   label, choose Recurring / One-Time.
+3. Recurring: choose a preset (two per row), set "Every [n] [unit]" and the
+   first occurrence, and optionally cap it with "Repeat [n] times, then it
+   stops" (empty = forever). One-Time: pick date + time.
 4. Toggle **Remind Me** (defaults on). Saving requests notification permission.
 5. Save → `Habit.create` → `HabitController.add` → insert → prepend to state →
    async `scheduler.sync(..., askPermissions: true)`.
@@ -31,7 +32,8 @@
 ### Complete a habit
 - Recurring: the switch marks it done and `nextDueAt` rolls to the next future
   occurrence; a completion row is logged. The tile stays in Active with a fresh
-  countdown.
+  countdown. For a limited series the `N×` pill decrements; after the last
+  occurrence the series finishes (`Complete`) instead of rolling again.
 - One-Time: the switch toggles done/completedAt, logs or removes the latest
   completion, and the tile moves between Active and Completed (strikethrough when
   done).
@@ -46,15 +48,17 @@
 
 ### Let time pass
 - App closed: OS fires the scheduled alarms. A fired reminder re-arms that
-  habit's next occurrence; the next app start reconciles everything else and tops
-  the 60-reminder window back up.
+  habit's next occurrence (unless a limited series has just finished); the next
+  app start reconciles everything else and tops the 60-reminder window back up.
 - App open: the due ticker wakes at the soonest due time (+300ms), rolls the
-  habit, and the countdown restarts. Resume from background also reconciles.
+  habit, and the countdown restarts. Resume from background also reconciles and
+  clears already-seen notifications from the shade.
 - Reboot/update: the boot receiver restores alarms; the next reconcile re-plans.
 
 ### Calendar check
 1. App bar toggle → calendar (fade/slide switch).
-2. Month grid shows a heat square per day (deeper green = more habits).
+2. Month grid shows a heat square per day (deeper green = higher completed ÷
+   scheduled ratio; a habit counts once per day).
 3. Tap a day → date card lists its recurring then one-time habits; toggle or tap
    to edit. Filter pills can hide One-Time or Recurring.
 
@@ -112,7 +116,7 @@ Notification "Done" while app is dead goes straight to
 cd app
 flutter pub get
 flutter analyze
-flutter test
+flutter test                    # 5 suites, 48 tests
 flutter run                     # debug device/emulator
 flutter build apk --release     # current signing uses the debug key
 ```
@@ -127,17 +131,21 @@ device output show the same lines.
    step in `_onUpgrade` with a version bump (`AppConstants.databaseVersion`).
 3. `data/services/sql_codec.dart`: add the column to `_schemas` (required flag
    and type) so backups round-trip; update `backup_codec_test.dart`.
-4. `core/ui/habit_form/habit_form_sheet.dart`: input + save wiring.
+4. `core/ui/habit_form/habit_form_sheet.dart`: input + save wiring (see
+   `description` for the note and `recur_count` for the repeat cap).
 5. Surface it in `habit_tile.dart` / `calendar_view.dart` if relevant; update
    `test/scheduling_test.dart` for tolerant parsing.
-6. Run `flutter analyze` and `flutter test`.
+6. Mirror any visible change in `website/src/app/components/DemoSection.tsx`
+   (docs/README in that folder explains the demo conventions).
+7. Run `flutter analyze` and `flutter test`.
 
 ### Changing recurrence or scheduling
 - All recurrence maths lives in `data/models/recurrence.dart`; time is always
   truncated to the minute.
 - The reminder plan lives in `core/logic/habit_scheduler.dart` `_plan`; caps are
   `globalCap = 60` and per-habit quota. Add tests to
-  `test/habit_scheduler_test.dart` (fakes exist there).
+  `test/habit_scheduler_test.dart` (fakes exist there) and recent repeat-count
+  behaviour to `test/recurrence_test.dart`.
 - Notification plumbing (channels, ids, modes, permissions) is
   `data/services/notification_service.dart`; never bypass `replaceAll` for bulk
   changes, and keep calls serialised through its queue.
@@ -179,7 +187,9 @@ device output show the same lines.
    ids are never imported.
 8. **Label delete unlinks, never deletes habits.**
 9. **UI writes through controllers** — no `sqflite` calls from widgets.
-10. **Home has no ads** — Unity surfaces only on the Logs page and via drawer
+10. **`recur_count = NULL` means forever** — never turn a missing count into 0
+    or 1; `nextAfter` must return null only after the series' final occurrence.
+11. **Home has no ads** — Unity surfaces only on the Logs page and via drawer
     actions.
 
 ---

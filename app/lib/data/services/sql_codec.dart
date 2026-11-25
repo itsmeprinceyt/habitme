@@ -45,6 +45,9 @@ abstract final class SqlCodec {
       _Column(HabitColumns.isRecurring, required: true),
       _Column(HabitColumns.recurUnit, isText: true),
       _Column(HabitColumns.recurInterval),
+      // Optional so backups written before the repeat limit existed still
+      // import as "repeats forever".
+      _Column(HabitColumns.recurCount),
       _Column(HabitColumns.notify, required: true),
       _Column(HabitColumns.isDone, required: true),
       _Column(HabitColumns.oneTimeAt),

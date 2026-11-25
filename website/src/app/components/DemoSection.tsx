@@ -30,7 +30,7 @@ import {
   CalendarClock,
   Tag,
 } from "lucide-react";
-import { MADE_BY_URL } from "../../utils/main.util";
+import { GITHUB_RELEASE_URL, MADE_BY_URL } from "../../utils/main.util";
 import { useEffect, useState } from "react";
 
 export type HabitType = "recurring" | "one-time";
@@ -43,6 +43,14 @@ export interface MockHabit {
   isDone: boolean;
   labelId: string | null;
   notify: boolean;
+  /** Optional note shown inside the expanded tile. */
+  description?: string;
+  /** Total times a limited recurring series repeats; absent means forever. */
+  repeatCount?: number | null;
+  /** Occurrences left in a limited series (decrements as you complete it). */
+  remainingCount?: number | null;
+  recurInterval?: number;
+  recurUnit?: "days" | "hours" | "months";
   /** Local ISO timestamp used by the live countdown, e.g. 2026-11-24T07:00:00 */
   dueAt?: string;
   /** Pre-formatted target, mirrors the app's date formatting */
@@ -58,6 +66,10 @@ export interface NewHabitInput {
   labelId: string | null;
   recurrenceLabel: string;
   notify: boolean;
+  description?: string;
+  repeatCount: number | null;
+  recurInterval: number;
+  recurUnit: "days" | "hours" | "months";
 }
 
 export interface MockLabel {
@@ -352,6 +364,15 @@ function HabitTile({
   const countdown =
     now !== null && target !== null ? formatCountdown(target, now) : null;
   const countdownOverdue = countdown?.startsWith("Overdue") ?? false;
+  const remaining = habit.remainingCount ?? null;
+  const limitPill =
+    habit.type === "recurring"
+      ? remaining == null
+        ? "∞"
+        : remaining === 0
+          ? "Complete"
+          : `${remaining}×`
+      : null;
 
   return (
     <div
@@ -392,15 +413,36 @@ function HabitTile({
         </span>
 
         <div className="min-w-0 flex-1">
-          <div
-            className="truncate text-[16px] font-semibold leading-tight"
-            style={{
-              color: done ? C.muted : C.white,
-              textDecoration: strike ? "line-through" : undefined,
-              textDecorationColor: C.muted,
-            }}
-          >
-            {habit.name}
+          <div className="flex min-w-0 items-center gap-1.5">
+            <span
+              className="truncate text-[16px] font-semibold leading-tight"
+              style={{
+                color: done ? C.muted : C.white,
+                textDecoration: strike ? "line-through" : undefined,
+                textDecorationColor: C.muted,
+              }}
+            >
+              {habit.name}
+            </span>
+            {limitPill && (
+              <span
+                className="flex shrink-0 items-center gap-0.75 rounded-md border px-1.5 py-0.5 text-[10px] font-bold leading-none"
+                style={{
+                  color: themeColor,
+                  borderColor: `${themeColor}59`,
+                  backgroundColor: `${themeColor}1f`,
+                }}
+              >
+                {remaining == null ? (
+                  <Repeat className="h-2.75 w-2.75" />
+                ) : remaining === 0 ? (
+                  <CheckCircle2 className="h-2.75 w-2.75" />
+                ) : (
+                  <Repeat className="h-2.75 w-2.75" />
+                )}
+                {limitPill}
+              </span>
+            )}
           </div>
           <div className="mt-0.75 truncate text-[12.5px] leading-tight text-(--hm-white)">
             {habit.recurrenceLabel}
@@ -531,6 +573,48 @@ function HabitTile({
                   <Info className="h-3.75 w-3.75 text-(--hm-muted)" />
                   <span className="text-xs text-(--hm-muted)">
                     No specific target time set
+                  </span>
+                </div>
+              )}
+
+              {habit.type === "recurring" && (
+                <>
+                  <div className="mt-2 flex items-center gap-1.5">
+                    <Repeat
+                      className="h-3.75 w-3.75"
+                      style={{ color: themeColor }}
+                    />
+                    <span className="text-xs font-semibold text-(--hm-muted)">
+                      Repeats:
+                    </span>
+                    <span className="truncate text-[12.5px] font-semibold text-(--hm-white)">
+                      {habit.recurrenceLabel}
+                    </span>
+                  </div>
+                  <div className="mt-1.5 flex items-center gap-1.5">
+                    <CalendarClock
+                      className="h-3.75 w-3.75"
+                      style={{ color: themeColor }}
+                    />
+                    <span className="text-xs font-semibold text-(--hm-muted)">
+                      Remaining:
+                    </span>
+                    <span className="truncate text-[12.5px] font-semibold text-(--hm-white)">
+                      {habit.repeatCount == null || remaining == null
+                        ? "Unlimited"
+                        : remaining === 0
+                          ? `Series complete · ${habit.repeatCount} of ${habit.repeatCount}`
+                          : `${remaining} of ${habit.repeatCount} occurrences`}
+                    </span>
+                  </div>
+                </>
+              )}
+
+              {habit.description && (
+                <div className="mt-2 flex items-start gap-1.5">
+                  <Info className="mt-px h-3.5 w-3.5 shrink-0 text-(--hm-muted)" />
+                  <span className="text-[11.5px] leading-snug text-(--hm-muted)">
+                    {habit.description}
                   </span>
                 </div>
               )}
@@ -879,7 +963,9 @@ const PRESETS = [
 
 function recurrenceText(interval: number, unit: "days" | "hours" | "months") {
   const singular = unit.slice(0, -1);
-  return `Every ${interval} ${interval === 1 ? singular : unit}`;
+  return interval === 1
+    ? `Every ${singular}`
+    : `Every ${interval} ${unit}`;
 }
 
 function HabitForm({
@@ -898,9 +984,21 @@ function HabitForm({
   const [isRecurring, setIsRecurring] = useState(
     habit ? habit.type === "recurring" : true,
   );
-  const [interval, setIntervalValue] = useState(1);
-  const [unit, setUnit] = useState<"days" | "hours" | "months">("days");
-  const [preset, setPreset] = useState("Daily");
+  const [interval, setIntervalValue] = useState(habit?.recurInterval ?? 1);
+  const [unit, setUnit] = useState<"days" | "hours" | "months">(
+    habit?.recurUnit ?? "days",
+  );
+  const [preset, setPreset] = useState(
+    PRESETS.find(
+      (item) =>
+        item.interval === (habit?.recurInterval ?? 1) &&
+        item.unit === (habit?.recurUnit ?? "days"),
+    )?.label ?? "",
+  );
+  const [repeatCount, setRepeatCount] = useState(
+    habit?.repeatCount ? String(habit.repeatCount) : "",
+  );
+  const [description, setDescription] = useState(habit?.description ?? "");
   const [notify, setNotify] = useState(habit?.notify ?? true);
   const [error, setError] = useState("");
 
@@ -916,6 +1014,7 @@ function HabitForm({
       setError("Please name your habit");
       return;
     }
+    const parsedRepeat = parseInt(repeatCount, 10);
     onSave({
       name: trimmed,
       type: isRecurring ? "recurring" : "one-time",
@@ -924,6 +1023,15 @@ function HabitForm({
         ? recurrenceText(interval, unit)
         : "One-time habit",
       notify,
+      description: description.trim() || undefined,
+      repeatCount:
+        isRecurring && repeatCount.trim() !== ""
+          ? Number.isNaN(parsedRepeat) || parsedRepeat < 1
+            ? 1
+            : parsedRepeat
+          : null,
+      recurInterval: interval,
+      recurUnit: unit,
     });
   };
 
@@ -979,6 +1087,20 @@ function HabitForm({
           </div>
 
           <div>
+            <label className="text-[10px] font-bold tracking-[1.1px] text-(--hm-muted)">
+              DESCRIPTION / NOTES (OPTIONAL)
+            </label>
+            <textarea
+              value={description}
+              onChange={(event) => setDescription(event.target.value.slice(0, 300))}
+              rows={2}
+              placeholder="Why this matters, or a short reminder note"
+              className="mt-2 w-full resize-none rounded-xl px-3.5 py-2.5 text-[13px] text-(--hm-white) placeholder:text-(--hm-muted) focus:outline-none"
+              style={{ backgroundColor: C.card }}
+            />
+          </div>
+
+          <div>
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-bold tracking-[1.1px] text-(--hm-muted)">
                 LABEL / GROUP
@@ -991,15 +1113,12 @@ function HabitForm({
               <button
                 type="button"
                 onClick={() => setLabelId(null)}
-                className="shrink-0 rounded-lg px-2.5 py-1.5 text-[11.5px]"
+                className="shrink-0 rounded-lg border px-2.5 py-1.5 text-[11.5px]"
                 style={{
                   backgroundColor: labelId === null ? `${C.accent}24` : C.card,
                   color: labelId === null ? C.accent : C.muted,
                   fontWeight: labelId === null ? 700 : 500,
-                  boxShadow:
-                    labelId === null
-                      ? `0 2px 8px ${C.accent}47`
-                      : RAISED_SHADOW_SMALL,
+                  borderColor: labelId === null ? `${C.accent}59` : "transparent",
                 }}
               >
                 None
@@ -1011,12 +1130,10 @@ function HabitForm({
                     key={label.id}
                     type="button"
                     onClick={() => setLabelId(label.id)}
-                    className="flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11.5px]"
+                    className="flex shrink-0 items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11.5px]"
                     style={{
                       backgroundColor: active ? `${label.color}24` : C.card,
-                      boxShadow: active
-                        ? `0 2px 8px ${label.color}47`
-                        : RAISED_SHADOW_SMALL,
+                      borderColor: active ? `${label.color}59` : "transparent",
                     }}
                   >
                     <span
@@ -1062,12 +1179,10 @@ function HabitForm({
                     key={title}
                     type="button"
                     onClick={() => setIsRecurring(value)}
-                    className="rounded-xl p-3 text-left"
+                    className="rounded-xl border p-3 text-left"
                     style={{
                       backgroundColor: active ? `${C.accent}14` : C.card,
-                      boxShadow: active
-                        ? `0 4px 14px ${C.accent}4d`
-                        : RAISED_SHADOW_SMALL,
+                      borderColor: active ? `${C.accent}73` : C.border,
                     }}
                   >
                     <div className="flex items-center">
@@ -1106,7 +1221,7 @@ function HabitForm({
                 <span className="text-[10px] font-bold tracking-[1.1px] text-(--hm-muted)">
                   HOW OFTEN DOES IT REPEAT?
                 </span>
-                <div className="mt-2 flex gap-1.5 overflow-x-auto pb-1">
+                <div className="mt-2 grid grid-cols-2 gap-1.5">
                   {PRESETS.map((item) => {
                     const active = preset === item.label;
                     return (
@@ -1114,11 +1229,12 @@ function HabitForm({
                         key={item.label}
                         type="button"
                         onClick={() => applyPreset(item)}
-                        className="shrink-0 rounded-full px-2.5 py-1.5 text-[11px]"
+                        className="rounded-lg border px-2 py-1.5 text-center text-[11px]"
                         style={{
                           backgroundColor: active
                             ? `${C.accent}24`
                             : C.surfaceLight,
+                          borderColor: active ? `${C.accent}59` : "transparent",
                           color: active ? C.accent : C.muted,
                           fontWeight: active ? 700 : 500,
                         }}
@@ -1162,6 +1278,27 @@ function HabitForm({
                     <option value="months">month(s)</option>
                   </select>
                 </div>
+
+                <div
+                  className="mt-2 flex items-center gap-2 rounded-xl px-3 py-2.5"
+                  style={{ backgroundColor: C.surfaceLight }}
+                >
+                  <span className="text-[13px] font-semibold text-(--hm-muted)">
+                    Repeat
+                  </span>
+                  <input
+                    type="number"
+                    min={1}
+                    value={repeatCount}
+                    placeholder="∞"
+                    onChange={(event) => setRepeatCount(event.target.value)}
+                    className="w-12 rounded-lg px-2 py-1.5 text-center text-sm font-bold text-(--hm-white) placeholder:text-(--hm-muted) focus:outline-none"
+                    style={{ backgroundColor: C.card }}
+                  />
+                  <span className="text-[12.5px] font-semibold text-(--hm-muted)">
+                    {repeatCount.trim() === "" ? "times" : "times, then it stops"}
+                  </span>
+                </div>
               </div>
 
               <div>
@@ -1169,11 +1306,8 @@ function HabitForm({
                   FIRST OCCURRENCE / START TIME
                 </span>
                 <div
-                  className="mt-2 flex items-center gap-2.5 rounded-xl px-3.5 py-2.5"
-                  style={{
-                    backgroundColor: C.card,
-                    boxShadow: RAISED_SHADOW_SMALL,
-                  }}
+                  className="mt-2 flex items-center gap-2.5 rounded-xl border px-3.5 py-2.5"
+                  style={{ backgroundColor: C.card, borderColor: C.border }}
                 >
                   <CalendarDays
                     className="h-5 w-5"
@@ -1189,8 +1323,8 @@ function HabitForm({
           )}
 
           <div
-            className="flex items-center gap-3 rounded-xl px-3.5 py-2.5"
-            style={{ backgroundColor: C.card, boxShadow: RAISED_SHADOW_SMALL }}
+            className="flex items-center gap-3 rounded-xl border px-3.5 py-2.5"
+            style={{ backgroundColor: C.card, borderColor: C.border }}
           >
             <span
               className="flex h-8 w-8 items-center justify-center rounded-lg"
@@ -1277,6 +1411,19 @@ export function DemoSection({
     completed: true,
   });
   const [closedGroups, setClosedGroups] = useState<Record<string, boolean>>({});
+
+  // The demo starts a quiet 30s timer on the first interaction. It keeps
+  // running in the background, so anyone actually trying the app gets the
+  // "get the real thing" card inside the phone.
+  const [engaged, setEngaged] = useState(false);
+  const [promoOpen, setPromoOpen] = useState(false);
+  const [promoDismissed, setPromoDismissed] = useState(false);
+
+  useEffect(() => {
+    if (!engaged || promoDismissed) return;
+    const timer = window.setTimeout(() => setPromoOpen(true), 30_000);
+    return () => window.clearTimeout(timer);
+  }, [engaged, promoDismissed]);
 
   const activeHabits = habits.filter((habit) => !habit.isDone);
   const completedHabits = habits.filter((habit) => habit.isDone);
@@ -1380,7 +1527,7 @@ export function DemoSection({
         className="max-w-7xl mx-auto flex flex-col items-center"
         style={themeVars}
       >
-        <div className="text-center mb-12">
+        <div data-reveal className="text-center mb-12">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#141414] border border-[#262626] text-xs text-[#2BD673] font-medium mb-3">
             <Smartphone className="w-3.5 h-3.5" />
             <span>App Functionality Sample</span>
@@ -1389,10 +1536,8 @@ export function DemoSection({
             Experience the Mobile App UI
           </h2>
           <p className="text-sm sm:text-base text-[#8A8A8A] max-w-lg mt-2 mx-auto">
-            A working replica of the real app: the same deep green-black
-            palette, label-coloured cards, live countdowns and heatmap calendar.
-            Tap a card to expand it and flip a switch to complete a habit — then
-            watch recurring habits roll forward so the streak never dies.
+            Try it right here: tap a habit, complete it, and watch it roll
+            forward — no download needed.
           </p>
           <p className="text-[10px] text-[#8A8A8A] mt-2 italic">
             *Does not represent the final product*
@@ -1400,7 +1545,10 @@ export function DemoSection({
         </div>
 
         {/* Mobile Device Frame */}
-        <div className="relative w-full max-w-95 rounded-[44px] p-3 bg-linear-to-b from-[#262626] via-[#141414] to-[#121212] border border-[#333] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9)]">
+        <div
+          data-anim="demo-phone"
+          className="relative w-full max-w-95 rounded-[44px] p-3 bg-linear-to-b from-[#262626] via-[#141414] to-[#121212] border border-[#333] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9)]"
+        >
           {/* Phone Speaker & Camera Notch */}
           <div className="absolute top-5 left-1/2 -translate-x-1/2 w-28 h-4 bg-black rounded-full z-30 flex items-center justify-center">
             <div className="w-10 h-1 bg-[#262626] rounded-full mr-2" />
@@ -1409,6 +1557,7 @@ export function DemoSection({
 
           {/* Phone Inner Screen */}
           <div
+            onPointerDown={() => setEngaged(true)}
             className="relative w-full h-170 rounded-[36px] overflow-hidden flex flex-col border border-black select-none text-(--hm-white)"
             style={{
               backgroundImage: `linear-gradient(180deg, #0E1511 0%, ${C.black} 35%, ${C.black} 100%)`,
@@ -1622,6 +1771,47 @@ export function DemoSection({
                 <span>New habit</span>
               </button>
             </div>
+
+            {/* In-phone download prompt, started by the interaction timer */}
+            {promoOpen && (
+              <div className="absolute inset-0 z-60 flex items-center justify-center bg-black/80 p-5 backdrop-blur-[2px]">
+                <div
+                  className="w-full max-w-[280px] rounded-2xl border p-4 text-center"
+                  style={{ backgroundColor: C.surface, borderColor: C.border }}
+                >
+                  <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-linear-to-br from-[#43D17C] to-[#128A44]">
+                    <Download className="h-6 w-6 stroke-3 text-[#0A0E0B]" />
+                  </span>
+                  <h3 className="mt-3 text-[17px] font-extrabold text-(--hm-white)">
+                    Enjoying the demo?
+                  </h3>
+                  <p className="mt-1.5 text-[12.5px] leading-relaxed text-(--hm-muted)">
+                    This is only a preview. Download the HabitMe app to keep
+                    your habits, labels and reminders on your phone — and never
+                    lose a streak.
+                  </p>
+                  <Link
+                    href={GITHUB_RELEASE_URL}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-4 flex items-center justify-center gap-2 rounded-xl bg-linear-to-br from-[#43D17C] to-[#128A44] py-2.5 text-[13px] font-extrabold text-[#0A0E0B]"
+                  >
+                    <Download className="h-4 w-4 stroke-3" />
+                    Download the app
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPromoOpen(false);
+                      setPromoDismissed(true);
+                    }}
+                    className="mt-2 w-full rounded-xl py-2 text-[12px] font-bold text-(--hm-muted) transition-colors hover:text-(--hm-white) cursor-pointer"
+                  >
+                    Keep exploring
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Habit form dialog */}
             {formHabit !== null && (

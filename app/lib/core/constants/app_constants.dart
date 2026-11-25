@@ -12,7 +12,7 @@ abstract final class AppConstants {
   static const pagePadding = 16.0;
   static const fabClearance = 96.0;
   static const databaseName = 'habitme.db';
-  static const databaseVersion = 3;
+  static const databaseVersion = 4;
   static const tableHabits = 'habits';
   static const tableCompletions = 'completions';
   static const tableLabels = 'labels';

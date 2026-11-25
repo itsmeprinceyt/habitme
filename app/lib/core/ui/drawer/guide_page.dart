@@ -47,6 +47,7 @@ class GuidePage extends StatelessWidget {
               title: 'Modes: Recurring vs One-Time',
               content:
                   '• Recurring Habit: For routines you repeat regularly (every X minutes, hours, days, months, or years). When you mark it done or when the time passes, it automatically rolls over to the next occurrence.\n\n'
+                  '• Repeat Count: Set how many times a recurring habit should occur. Leave it empty for forever — after the last occurrence the habit stops rolling over and finishes on its own.\n\n'
                   '• One-Time Habit: For tasks you only need to do once at a specific date and time. Once completed, it stays completed with no future countdown.',
             ),
             const SizedBox(height: 16),

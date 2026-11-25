@@ -3,6 +3,8 @@ import Link from "next/link";
 import { ArrowLeft, FileText } from "lucide-react";
 import { SiteHeader } from "./SiteHeader";
 import { SiteFooter } from "./SiteFooter";
+import { SiteMotion } from "./SiteMotion";
+import { SmoothSectionLink } from "./SmoothSectionLink";
 import { ROUTES } from "../../utils/main.util";
 
 export interface LegalSection {
@@ -72,15 +74,15 @@ export function LegalPage({
             <ol className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm text-[#8A8A8A]">
               {sections.map((section, index) => (
                 <li key={section.id}>
-                  <Link
-                    href={`#${section.id}`}
+                  <SmoothSectionLink
+                    id={section.id}
                     className="hover:text-white transition-colors"
                   >
                     <span className="text-[#22C55E] mr-1.5 font-mono text-xs">
                       {String(index + 1).padStart(2, "0")}
                     </span>
                     {section.title}
-                  </Link>
+                  </SmoothSectionLink>
                 </li>
               ))}
             </ol>
@@ -111,6 +113,7 @@ export function LegalPage({
       </main>
 
       <SiteFooter />
+      <SiteMotion />
     </div>
   );
 }

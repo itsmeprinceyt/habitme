@@ -36,14 +36,11 @@ export const UNITY_GAME_PLAYER_PRIVACY_POLICY_URL =
 /* Internal routes                                                            */
 /* -------------------------------------------------------------------------- */
 
-/** Cross-page hrefs. Hash routes point at landing-page sections. */
+/** Cross-page hrefs. Landing-page sections are scrolled to via refs, not hashes. */
 export const ROUTES = {
   home: "/",
   privacy: "/privacy",
   terms: "/terms",
-  homeFeatures: "/#features",
-  homeDemo: "/#demo",
-  homeAbout: "/#about",
 } as const;
 
 export type Route = (typeof ROUTES)[keyof typeof ROUTES];

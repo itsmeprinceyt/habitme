@@ -10,6 +10,7 @@ abstract final class HabitColumns {
   static const isRecurring = 'is_recurring';
   static const recurUnit = 'recur_unit';
   static const recurInterval = 'recur_interval';
+  static const recurCount = 'recur_count';
   static const notify = 'notify';
   static const isDone = 'is_done';
   static const oneTimeAt = 'one_time_at';
@@ -79,6 +80,12 @@ class Habit {
     final interval = rawInterval != null && rawInterval > 0
         ? rawInterval
         : null;
+    // Older builds have no limit, so a missing or unusable count reads as
+    // "repeats forever" instead of dropping the schedule.
+    final rawCount = map[HabitColumns.recurCount] is int
+        ? map[HabitColumns.recurCount] as int
+        : null;
+    final count = rawCount != null && rawCount > 0 ? rawCount : null;
     final recurring = _flag(map[HabitColumns.isRecurring]);
     final createdAt = _toDate(map[HabitColumns.createdAt]);
     final updatedAt = _toDate(map[HabitColumns.updatedAt]);
@@ -88,7 +95,11 @@ class Habit {
       description: _cleanDescription(map[HabitColumns.description] as String?),
       labelId: map[HabitColumns.labelId] as String?,
       recurrence: recurring && unit != null && interval != null
-          ? Recurrence(unit: RecurUnit.fromName(unit), interval: interval)
+          ? Recurrence(
+              unit: RecurUnit.fromName(unit),
+              interval: interval,
+              count: count,
+            )
           : null,
       notify: _flag(map[HabitColumns.notify]),
       isDone: _flag(map[HabitColumns.isDone]),
@@ -163,6 +174,7 @@ class Habit {
       HabitColumns.isRecurring: isRecurring ? 1 : 0,
       HabitColumns.recurUnit: recurrence?.unit.name,
       HabitColumns.recurInterval: recurrence?.interval,
+      HabitColumns.recurCount: recurrence?.count,
       HabitColumns.notify: notify ? 1 : 0,
       HabitColumns.isDone: isDone ? 1 : 0,
       HabitColumns.oneTimeAt: oneTimeAt?.millisecondsSinceEpoch,

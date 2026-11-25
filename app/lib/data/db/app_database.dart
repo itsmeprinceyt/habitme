@@ -44,6 +44,7 @@ class AppDatabase {
         ${HabitColumns.isRecurring} INTEGER NOT NULL DEFAULT 0,
         ${HabitColumns.recurUnit} TEXT,
         ${HabitColumns.recurInterval} INTEGER,
+        ${HabitColumns.recurCount} INTEGER,
         ${HabitColumns.notify} INTEGER NOT NULL DEFAULT 0,
         ${HabitColumns.isDone} INTEGER NOT NULL DEFAULT 0,
         ${HabitColumns.oneTimeAt} INTEGER,
@@ -111,6 +112,15 @@ class AppDatabase {
         await db.execute('''
           ALTER TABLE ${AppConstants.tableHabits}
           ADD COLUMN ${HabitColumns.description} TEXT
+        ''');
+      } catch (_) {}
+    }
+    if (oldVersion < 4) {
+      // Existing habits repeat forever; a NULL count keeps that behaviour.
+      try {
+        await db.execute('''
+          ALTER TABLE ${AppConstants.tableHabits}
+          ADD COLUMN ${HabitColumns.recurCount} INTEGER
         ''');
       } catch (_) {}
     }

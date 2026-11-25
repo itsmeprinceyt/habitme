@@ -57,5 +57,5 @@ The site is at http://localhost:3000. Build with `npm run build`.
 
 ## Links
 
-- Website: https://www.itsmeprince.com
+- Website: https://habitme.vercel.app
 - Releases: https://github.com/itsmeprinceyt/habitme/releases

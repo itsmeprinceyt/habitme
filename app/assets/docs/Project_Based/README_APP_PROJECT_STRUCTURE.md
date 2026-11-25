@@ -15,7 +15,7 @@
 | Framework | Flutter, Dart SDK `^3.13.7`, Material 3, **dark theme only** |
 | App id / version | `com.itsmeprince.habitme`, `1.0.0+1` |
 | State | `flutter_riverpod` ^3.4.3 (`AsyncNotifier`, `Notifier`, `Provider`) |
-| Persistence | `sqflite` ^2.4.5 — `habitme.db`, schema v2 |
+| Persistence | `sqflite` ^2.4.5 — `habitme.db`, schema v4 (`description`, `recur_count`) |
 | Notifications | `flutter_local_notifications` ^22.3.3 + `timezone` ^0.11.2 |
 | Calendar | `table_calendar` ^3.3.0 |
 | Files | `path_provider` ^2.1.6, `file_picker` ^13.3.2, `share_plus` ^13.3.1 |
@@ -56,7 +56,7 @@ Rules implied by the code:
 
 ---
 
-## 3. File Tree (44 Dart files)
+## 3. File Tree (42 lib Dart files + 5 test suites)
 
 ```
 app/
@@ -105,11 +105,12 @@ app/
 │  │  │     ├─ label_subheader.dart
 │  │  │     ├─ animated_entrance.dart (AnimatedEntrance + ShimmerSweep)
 │  │  │     └─ ad_banner.dart
-│  │  └─ utils/
-│  │     ├─ app_log.dart              in-memory ring buffer (600 lines)
-│  │     ├─ date_utils.dart
-│  │     ├─ duration_format.dart
-│  │     └─ expansion_preferences.dart
+│  │     └─ utils/
+│  │        ├─ app_log.dart              in-memory ring buffer (600 lines)
+│  │        ├─ calendar_heat.dart        completed ÷ scheduled day progress
+│  │        ├─ date_utils.dart
+│  │        ├─ duration_format.dart
+│  │        └─ expansion_preferences.dart
 │  └─ data/
 │     ├─ db/app_database.dart
 │     ├─ models/{habit,label,completion,recurrence}.dart
@@ -122,6 +123,8 @@ app/
 │        └─ sql_codec.dart
 └─ test/
    ├─ habit_scheduler_test.dart        plan caps, fairness, stable keys, oversubscription
+   ├─ recurrence_test.dart             limited series, remaining, clamping, isFinished
+   ├─ calendar_heat_test.dart          day ratios, duplicate completion capping
    ├─ scheduling_test.dart             minute precision, ids, countdown, tolerant parsing
    └─ backup_codec_test.dart           round trip, ordering, validation, edge parsing
 ```
@@ -204,14 +207,19 @@ desugaring on, multiDex on, release currently signed with the debug key
 
 ```bash
 cd app
-flutter test                     # all three suites
+flutter test                     # all five suites, 48 tests
 flutter test test/habit_scheduler_test.dart
 ```
 
 - `habit_scheduler_test.dart` — fake repo + fake notification service; verifies
   no starvation for a 2-minute habit next to a daily one, global cap, per-habit
   quota, stable keys across sub-minute clock shifts, one-time reminder rules,
-  oversubscription priority (not-done first), `onReminderFired` behaviour.
+  oversubscription priority (not-done first), `onReminderFired` behaviour, and
+  that a limited series stops producing occurrences after its last repeat.
+- `recurrence_test.dart` — `count` limits `nextAfter` (returns `null` when
+  finished), `remaining`, `isFinished`, no `upcoming` beyond the count.
+- `calendar_heat_test.dart` — completed ÷ scheduled ratio, duplicate toggles
+  counted once, completed never exceeds scheduled.
 - `scheduling_test.dart` — minute truncation, `nextAfter` strictly future,
   FNV-1a id stability, countdown strings, tolerant `Habit.fromMap` (zero
   interval, NULL flags, text epochs).
@@ -238,3 +246,32 @@ flutter test test/habit_scheduler_test.dart
 - `AdBanner` is only mounted on the Logs page, not on Home.
 - `HabitScheduler.isRecurrenceTooFrequent` and `canAddNotifyingHabit` are
   defined but not surfaced in the form UI.
+
+---
+
+## 9. Current Data & UI Snapshot (25 November 2026)
+
+- **Schema v4.** `habits` now also has `description TEXT` (v3) and
+  `recur_count INTEGER` (v4). Both are nullable; existing rows keep working
+  (no note, repeats forever). Backup/import includes both columns.
+- **Repeat count.** `Recurrence` carries an optional `count`. Null = forever;
+  otherwise the series produces exactly that many occurrences. `nextAfter`
+  returns `null` once the series is finished, `remaining()` and `isFinished()`
+  expose the limit, and `upcoming()` never returns more than the count allows.
+  `HabitScheduler.reconcile` stops rolling a finished series.
+- **Habit form.** Title, optional 300-character description, label chips,
+  Recurring/One-Time cards, then a `REPEAT` section: two presets per row,
+  `Every [n] [unit]`, optional `Repeat [n] times, then it stops`, then
+  `STARTS` / `SCHEDULED TIME` and the Remind Me switch. Small controls are flat
+  and bordered; dropshadows are reserved for tiles/cards/primary CTAs.
+- **Habit tile.** Recurring habits show an `∞` or `N×` pill beside the name and
+  expanded `Repeats:` / `Remaining:` rows; limited series show `Complete` once
+  exhausted. Description notes appear inside the expanded panel.
+- **Calendar.** The heatmap is completion-based (`completed ÷ scheduled`), not
+  planned-count-based; a habit counts once per day.
+- **Notifications.** Seen reminders are cleared with `clearDelivered()` on
+  launch and on resume, so the shade only keeps fresh reminders.
+- **Website demo.** `website/src/app/components/DemoSection.tsx` mirrors this
+  snapshot: repeat-count pill + rows, description, limited-series completion,
+  flat controls — plus a 30-second interaction timer that shows an in-phone
+  "download the app" card. Keep it in sync when these screens change.

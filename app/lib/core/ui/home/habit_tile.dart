@@ -6,6 +6,7 @@ import 'package:habit_me/core/utils/date_utils.dart';
 import 'package:habit_me/core/utils/expansion_preferences.dart';
 import 'package:habit_me/data/models/habit.dart';
 import 'package:habit_me/data/models/label.dart';
+import 'package:habit_me/data/models/recurrence.dart';
 
 class HabitTile extends StatefulWidget {
   const HabitTile({
@@ -15,6 +16,7 @@ class HabitTile extends StatefulWidget {
     required this.onToggle,
     required this.onEdit,
     required this.onDelete,
+    this.collapseSignal = 0,
   });
 
   final Habit habit;
@@ -22,6 +24,10 @@ class HabitTile extends StatefulWidget {
   final VoidCallback onToggle;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
+
+  /// Changes when the surrounding label group is collapsed. The tile then
+  /// closes itself, so re-expanding the group shows compact tiles again.
+  final int collapseSignal;
 
   @override
   State<HabitTile> createState() => _HabitTileState();
@@ -39,6 +45,15 @@ class _HabitTileState extends State<HabitTile> {
       'tile_${habit.id}',
       defaultValue: false,
     );
+  }
+
+  @override
+  void didUpdateWidget(covariant HabitTile oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.collapseSignal != oldWidget.collapseSignal && _isExpanded) {
+      _isExpanded = false;
+      ExpansionPreferences.instance.setBool('tile_${habit.id}', false);
+    }
   }
 
   void _toggleExpanded() {
@@ -78,6 +93,57 @@ class _HabitTileState extends State<HabitTile> {
       return '${recurrence.label} · Next: ${AppDateUtils.formatRelativeDateTime(habit.nextDueAt!)}';
     }
     return recurrence.label;
+  }
+
+  Widget _limitPill({
+    required Recurrence recurrence,
+    required int? remaining,
+    required Color color,
+  }) {
+    final finished = remaining == 0;
+    final text = remaining == null
+        ? '∞'
+        : finished
+        ? 'Complete'
+        : '$remaining×';
+    return Tooltip(
+      message: remaining == null
+          ? 'Repeats forever'
+          : finished
+          ? 'All ${recurrence.count} occurrences finished'
+          : '$remaining of ${recurrence.count} occurrences left',
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: color.withValues(alpha: 0.35)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              remaining == null
+                  ? Icons.all_inclusive_rounded
+                  : finished
+                  ? Icons.check_rounded
+                  : Icons.repeat_rounded,
+              size: 11,
+              color: color,
+            ),
+            const SizedBox(width: 3),
+            Text(
+              text,
+              style: TextStyle(
+                color: color,
+                fontSize: 10.5,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<bool> _confirm(BuildContext context) async {
@@ -125,6 +191,8 @@ class _HabitTileState extends State<HabitTile> {
     final done = habit.isDone;
     final strike = done && habit.isOneTime;
     final nextTarget = _relevantNextDate;
+    final recurrence = habit.recurrence;
+    final remaining = recurrence?.remaining(habit.anchorAt, DateTime.now());
 
     // Label colour blended over the card so the sweep stays opaque: mixing an
     // opaque and a translucent colour would dip towards transparency instead
@@ -235,13 +303,27 @@ class _HabitTileState extends State<HabitTile> {
                             ),
                           ),
                           const SizedBox(height: 3),
-                          Text(
-                            _summarySubtitle,
-                            style: const TextStyle(
-                              color: AppColors.white,
-                              fontSize: 12.5,
-                              height: 1.25,
-                            ),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  _summarySubtitle,
+                                  style: const TextStyle(
+                                    color: AppColors.white,
+                                    fontSize: 12.5,
+                                    height: 1.25,
+                                  ),
+                                ),
+                              ),
+                              if (recurrence != null) ...[
+                                const SizedBox(width: 6),
+                                _limitPill(
+                                  recurrence: recurrence,
+                                  remaining: remaining,
+                                  color: done ? AppColors.muted : themeColor,
+                                ),
+                              ],
+                            ],
                           ),
                           if (label != null) ...[
                             const SizedBox(height: 5),
@@ -495,7 +577,7 @@ class _HabitTileState extends State<HabitTile> {
                                   ),
                                 ],
                               ),
-                            ] else ...[
+                            ] else if (!habit.isRecurring) ...[
                               const Row(
                                 children: [
                                   Icon(
@@ -510,6 +592,74 @@ class _HabitTileState extends State<HabitTile> {
                                       style: TextStyle(
                                         color: AppColors.muted,
                                         fontSize: 12,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                            if (recurrence != null) ...[
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.repeat_rounded,
+                                    size: 15,
+                                    color: themeColor,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  const Text(
+                                    'Repeats:',
+                                    style: TextStyle(
+                                      color: AppColors.muted,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      recurrence.label,
+                                      style: const TextStyle(
+                                        color: AppColors.white,
+                                        fontSize: 12.5,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Row(
+                                children: [
+                                  Icon(
+                                    remaining == null
+                                        ? Icons.all_inclusive_rounded
+                                        : Icons.event_repeat_rounded,
+                                    size: 15,
+                                    color: themeColor,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  const Text(
+                                    'Remaining:',
+                                    style: TextStyle(
+                                      color: AppColors.muted,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      remaining == null
+                                          ? 'Unlimited'
+                                          : remaining == 0
+                                          ? 'Series complete · ${recurrence.count} of ${recurrence.count}'
+                                          : '$remaining of ${recurrence.count} occurrences',
+                                      style: const TextStyle(
+                                        color: AppColors.white,
+                                        fontSize: 12.5,
+                                        fontWeight: FontWeight.w600,
                                       ),
                                     ),
                                   ),

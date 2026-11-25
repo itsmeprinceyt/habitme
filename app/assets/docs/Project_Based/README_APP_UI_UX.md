@@ -46,9 +46,11 @@ Gradients:
 - `surfaceGradient`: `#1B2620 → #141C17` (expanded tile panel).
 - `backdropGradient`: `#0E1511 → #0A0E0B` (scaffold ambience).
 
-Shadows: `raisedShadow` for cards/tiles and `raisedShadowSmall` for chips,
-switches, small controls. Every raised element has a dark drop shadow plus a 1px
-light top edge — do not replace with Material elevation.
+Shadows: `raisedShadow` only on main components — habit tiles, cards, dialogs
+and primary CTAs. Chips, preset buttons, switches, label swatches, the "Remind
+Me" card and form inputs are flat with a 1px border; do not add glows or drop
+shadows to small controls. Use `AppTheme`/`AppColors` instead of Material
+elevation.
 
 Label colours are user data (8-swatch palette: green, orange, red, blue
 `#3B82F6`, purple `#A855F7`, pink `#EC4899`, cyan `#06B6D4`, yellow `#EAB308`).
@@ -104,37 +106,49 @@ HomePage (Scaffold)
   independent hit targets.
 - Subtitle logic: recurring → recurrence label (plus "· Next: …" when done);
   one-time → "Scheduled: …" or "Completed …" or "One-time habit".
+- Recurring habits carry an `∞` / `N×` pill beside the name (`Complete` with a
+  check once a limited series is exhausted); tapping it is not a separate action.
 - Expanded panel: label row, due/next/scheduled date (`d MMM, h:mm a`), live
-  countdown (accent, orange when overdue), "Completed at" for finished one-time
-  habits, and a green "Notifications enabled for this habit" line.
+  countdown (accent, orange when overdue), `Repeats:` (the recurrence label),
+  `Remaining:` (`Unlimited`, `N of M occurrences`, or `Series complete · M of M`),
+  the optional description note, "Completed at" for finished one-time habits,
+  and a green "Notifications enabled for this habit" line.
 - Swipe left (`endToStart`) reveals a delete icon and asks for confirmation;
   the form's delete button does the same with an explicit dialog.
 
 ### Home — Calendar view (`calendar_view.dart`)
 - `TableCalendar` month-only, Monday-first, range 2020–2100.
-- Each day is a 34×34 half-rounded square filled with a green heat scale:
-  `alpha = 0.14 + 0.64 × min(count/10, 1)`, plus a glow that grows with count,
-  a 0.55-alpha green ring for today and a white ring for the selected day.
-  Date text switches to black automatically on light fills.
+- Each day is a 34×34 half-rounded square filled with a **completion heat**:
+  `completed ÷ scheduled` for that day (`hasHeat ? 0.14 + 0.60 × ratio : 0`),
+  plus a glow that grows with completion, a 0.55-alpha green ring for today and
+  a white ring for the selected day. Duplicate toggles count once, completed is
+  capped at scheduled. Date text switches to black on light fills.
 - Two toggle chips ("One-Time", "Recurring"); off = grey card, on = accent
   gradient with a check.
 - Day card: full date + "N habits", then "Recurring" and "One-Time" categories,
   each item tappable (opens edit) with a toggle icon.
 
-### Habit form (`habit_form_sheet.dart`)
+### Habit form (`habit_form_sheet.dart` + `recurrence_picker.dart`)
 - Centred `Dialog`, max 480×680, scrollable body, header with accent icon tile
   and title (`Create New Habit` / `Edit Habit`), close button.
-- Fields: title (max 100 chars, required, snapshot-validation message), label
-  chips (`None` + labels) with inline **New Label** creation dialog, frequency
-  cards (`Recurring` / `One-Time`), recurrence picker, first-occurrence or
-  scheduled time, reminder switch.
-- Recurrence presets: Daily, Weekly, Monthly, Every 2 days, Hourly. Custom row:
-  "Every [number] [Minutes/Hours/Days/Months/Years]".
+- Fields, in order: title (max 100, required), optional description/notes
+  (max 300, 2–4 lines), label chips (`None` + labels) with inline **New Label**
+  dialog, frequency cards (`Recurring` / `One-Time`), `REPEAT` section,
+  `STARTS` (recurring) or `SCHEDULED TIME` (one-time), Remind Me switch.
+- `REPEAT` has no duplicate summary header. Presets sit **two per row** (Daily,
+  Weekly / Monthly, Every 2 days / Hourly), then two shared 48px rows:
+  `Every [n] [unit]` and `Repeat [n] times, then it stops`. The repeat field is
+  optional: empty shows `times` and means forever; a value shows
+  `times, then it stops` live as the user types. Units: minutes, hours, days,
+  months, years.
+- All small controls (preset chips, label chips, Every/Repeat rows, start-time
+  card, Remind Me) are flat with borders; no shadows or glows.
 - Saving state disables the footer button and shows a spinner; success snackbar
-  (`Habit created` / `Habit updated`), failure snackbar with the error.
+  (`Habit created` / `Habit updated`), failure snackbar with the error. Invalid
+  interval input shows an inline snackbar instead of silently clamping.
 - Edit mode adds a delete icon in the footer.
-- Changing type, unit/interval, or the recurring start time resets the schedule
-  and clears completion; otherwise `nextDueAt` is preserved.
+- Changing type, unit/interval/count, or the recurring start time resets the
+  schedule and clears completion; otherwise `nextDueAt` is preserved.
 - One-time habits with reminders must be scheduled in the future; past dates are
   allowed but warn ("This target time is set in the past") and block saving when
   notify is on.
@@ -143,11 +157,16 @@ HomePage (Scaffold)
 - Create row (name field + accent add button) with colour swatches; list of
   labels with dot, name, edit and delete. Edit opens a dialog with name + colour
   palette. Delete confirms that habits remain, just unlabelled.
+- List rows share one rhythm: 8px above, 8px around the separator, 16px at the
+  bottom, `minHeight: 56`, single-line ellipsised names, 36×36 icon buttons and
+  a 14px gap before the colour row.
 
 ### Guide page (`guide_page.dart`)
 - Scroll of cards: "Why HabitMe Exists" (product story), "Creating a Habit",
-  "Modes: Recurring vs One-Time", "Labels & Views", plus an orange-bordered
-  note about the 60-reminder OS limit and refreshing it by opening the app.
+  "Modes: Recurring vs One-Time", "Repeat Count" (empty = forever; a value
+  stops the series after the last occurrence), "Labels & Views", heatmap rules
+  and notification actions. It no longer advertises a 60-reminder warning;
+  reminders are planned up to the OS budget and refreshed when the app opens.
 
 ### Logs page (`log_viewer_page.dart`)
 - Two equal panes: live logs (monospace, selectable, 600-line ring) and the
@@ -209,3 +228,16 @@ HomePage (Scaffold)
   add `Semantics(toggled:)`.
 - Text scales with the system font size; the habit form is scrollable and the
   calendar cells are fixed 34px, so very large text can clip inside a day cell.
+
+---
+
+## 8. Website Demo Parity
+
+`website/src/app/components/DemoSection.tsx` is the interactive phone mockup in
+`#demo` and imitates this guide. It currently mirrors: repeat-count pill and
+`Repeats:` / `Remaining:` rows, limited-series completion, optional description
+notes, `Every …` / `Repeat … times, then it stops` rows, two presets per row,
+flat label/frequency/reminder controls, and the completion heatmap. It also runs
+a 30-second timer after the first interaction and shows an in-phone "download
+the app" card. Update the mockup whenever these screens change, so visitors see
+the latest app rather than an older design.

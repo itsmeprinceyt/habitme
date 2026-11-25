@@ -23,6 +23,16 @@ class _HabitListViewState extends ConsumerState<HabitListView> {
   late bool _isActiveExpanded;
   late bool _isCompletedExpanded;
 
+  /// Per label group, bumped when that group is collapsed so every expanded
+  /// habit tile inside it closes too.
+  final Map<String, int> _collapseTicks = {};
+
+  void _collapseGroup(String groupKey) {
+    setState(() {
+      _collapseTicks[groupKey] = (_collapseTicks[groupKey] ?? 0) + 1;
+    });
+  }
+
   @override
   void initState() {
     super.initState();
@@ -58,6 +68,7 @@ class _HabitListViewState extends ConsumerState<HabitListView> {
     WidgetRef ref,
     Habit habit,
     Map<String, HabitLabel> labelMap,
+    String groupKey,
   ) {
     final controller = ref.read(habitControllerProvider.notifier);
     final label = habit.labelId != null ? labelMap[habit.labelId] : null;
@@ -70,6 +81,7 @@ class _HabitListViewState extends ConsumerState<HabitListView> {
         label: label,
         onToggle: () => controller.toggle(habit.id),
         onEdit: () => HabitFormSheet.show(context, habit: habit),
+        collapseSignal: _collapseTicks[groupKey] ?? 0,
         onDelete: () {
           final messenger = ScaffoldMessenger.of(context);
           controller.delete(habit.id);
@@ -121,7 +133,15 @@ class _HabitListViewState extends ConsumerState<HabitListView> {
             prefKey: '${sectionKey}_label_${label.id}',
             label: label,
             habits: grouped[label.id]!,
-            tileBuilder: (h) => _tile(context, ref, h, labelMap),
+            tileBuilder: (h) => _tile(
+              context,
+              ref,
+              h,
+              labelMap,
+              '${sectionKey}_label_${label.id}',
+            ),
+            onCollapse: () =>
+                _collapseGroup('${sectionKey}_label_${label.id}'),
           ),
           const SizedBox(height: 6),
         ],
@@ -131,7 +151,15 @@ class _HabitListViewState extends ConsumerState<HabitListView> {
             prefKey: '${sectionKey}_label_unassigned',
             label: null,
             habits: unlabelled,
-            tileBuilder: (h) => _tile(context, ref, h, labelMap),
+            tileBuilder: (h) => _tile(
+              context,
+              ref,
+              h,
+              labelMap,
+              '${sectionKey}_label_unassigned',
+            ),
+            onCollapse: () =>
+                _collapseGroup('${sectionKey}_label_unassigned'),
           ),
         ],
       ],
@@ -269,12 +297,16 @@ class _LabelGroupView extends StatefulWidget {
     required this.label,
     required this.habits,
     required this.tileBuilder,
+    required this.onCollapse,
   });
 
   final String prefKey;
   final HabitLabel? label;
   final List<Habit> habits;
   final Widget Function(Habit) tileBuilder;
+
+  /// Called only when the group goes from expanded to collapsed.
+  final VoidCallback onCollapse;
 
   @override
   State<_LabelGroupView> createState() => _LabelGroupViewState();
@@ -293,10 +325,12 @@ class _LabelGroupViewState extends State<_LabelGroupView> {
   }
 
   void _toggle() {
+    final wasExpanded = _isExpanded;
     setState(() {
       _isExpanded = !_isExpanded;
     });
     ExpansionPreferences.instance.setBool(widget.prefKey, _isExpanded);
+    if (wasExpanded) widget.onCollapse();
   }
 
   @override
