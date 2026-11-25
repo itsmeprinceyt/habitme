@@ -252,6 +252,35 @@ class NotificationService {
     await _schedule(reminder, reminder.notificationId, mode);
   }
 
+  /// Removes reminders already sitting in the notification tray. Opening the
+  /// app means the user has seen them, so the tray should start clean.
+  ///
+  /// Only the ids that are currently displayed are cancelled; the pending
+  /// schedule is left alone, so nothing has to be re-armed afterwards.
+  Future<void> clearDelivered() {
+    final next = _tail.then((_) => _clearDelivered());
+    _tail = next.catchError((_) {});
+    return next;
+  }
+
+  Future<void> _clearDelivered() async {
+    try {
+      await init();
+      final active = await _guard(_plugin.getActiveNotifications());
+      for (final notification in active) {
+        final id = notification.id;
+        if (id == null) continue;
+        await _guard(_plugin.cancel(id: id));
+      }
+      if (active.isNotEmpty) {
+        debugPrint('Cleared ${active.length} displayed notification(s).');
+      }
+    } catch (error) {
+      // Unsupported platform or a plugin hiccup must never block app startup.
+      debugPrint('Clearing displayed notifications failed: $error');
+    }
+  }
+
   /// Cancels a reminder by its stable key.
   Future<void> cancelByKey(String key) {
     final next = _tail.then((_) => _cancelSingle(key));

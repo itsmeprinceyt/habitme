@@ -44,6 +44,9 @@ class _HabitAppState extends ConsumerState<HabitApp>
     };
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Notifications left in the tray were already seen; clear them so every
+      // launch starts with a clean shade, without touching pending alarms.
+      unawaited(NotificationService.instance.clearDelivered());
       NotificationService.instance.checkPermissionsOnLaunch().catchError(
         (_) {},
       );
@@ -63,6 +66,9 @@ class _HabitAppState extends ConsumerState<HabitApp>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     _lifecycle = state;
     if (state == AppLifecycleState.resumed) {
+      // Coming back to the app counts as opening it: clear the reminders that
+      // were delivered while it was away.
+      unawaited(NotificationService.instance.clearDelivered());
       // TODO(background): refill via workmanager/flutter_background_fetch every N minutes
       ref
           .read(habitControllerProvider.notifier)

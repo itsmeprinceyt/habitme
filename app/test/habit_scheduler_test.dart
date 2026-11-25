@@ -48,8 +48,7 @@ class FakeHabitRepository implements HabitRepository {
   Future<List<Completion>> completionsInRange(
     DateTime start,
     DateTime end,
-  ) async =>
-      [];
+  ) async => [];
 }
 
 class FakeNotificationService implements NotificationService {
@@ -77,6 +76,9 @@ class FakeNotificationService implements NotificationService {
 
   @override
   Future<void> openExactAlarmSettings() async {}
+
+  @override
+  Future<void> clearDelivered() async {}
 
   @override
   Future<void> replaceAll(List<ScheduledReminder> reminders) async {
@@ -166,57 +168,60 @@ void main() {
     expect(plan.length, lessThanOrEqualTo(HabitScheduler.globalCap));
   });
 
-  test('Per-habit quota: fast habit does not exceed 1 + extraPerHabit slots', () {
-    final habit1 = Habit(
-      id: 'fast',
-      name: 'Fast',
-      recurrence: const Recurrence(unit: RecurUnit.minutes, interval: 1),
-      notify: true,
-      isDone: false,
-      oneTimeAt: null,
-      anchorAt: now,
-      nextDueAt: now.add(const Duration(minutes: 1)),
-      completedAt: null,
-      createdAt: now,
-      updatedAt: now,
-    );
-    final habit2 = Habit(
-      id: 'slow1',
-      name: 'Slow 1',
-      recurrence: const Recurrence(unit: RecurUnit.days, interval: 1),
-      notify: true,
-      isDone: false,
-      oneTimeAt: null,
-      anchorAt: now,
-      nextDueAt: now.add(const Duration(days: 1)),
-      completedAt: null,
-      createdAt: now,
-      updatedAt: now,
-    );
-    final habit3 = Habit(
-      id: 'slow2',
-      name: 'Slow 2',
-      recurrence: const Recurrence(unit: RecurUnit.days, interval: 2),
-      notify: true,
-      isDone: false,
-      oneTimeAt: null,
-      anchorAt: now,
-      nextDueAt: now.add(const Duration(days: 2)),
-      completedAt: null,
-      createdAt: now,
-      updatedAt: now,
-    );
+  test(
+    'Per-habit quota: fast habit does not exceed 1 + extraPerHabit slots',
+    () {
+      final habit1 = Habit(
+        id: 'fast',
+        name: 'Fast',
+        recurrence: const Recurrence(unit: RecurUnit.minutes, interval: 1),
+        notify: true,
+        isDone: false,
+        oneTimeAt: null,
+        anchorAt: now,
+        nextDueAt: now.add(const Duration(minutes: 1)),
+        completedAt: null,
+        createdAt: now,
+        updatedAt: now,
+      );
+      final habit2 = Habit(
+        id: 'slow1',
+        name: 'Slow 1',
+        recurrence: const Recurrence(unit: RecurUnit.days, interval: 1),
+        notify: true,
+        isDone: false,
+        oneTimeAt: null,
+        anchorAt: now,
+        nextDueAt: now.add(const Duration(days: 1)),
+        completedAt: null,
+        createdAt: now,
+        updatedAt: now,
+      );
+      final habit3 = Habit(
+        id: 'slow2',
+        name: 'Slow 2',
+        recurrence: const Recurrence(unit: RecurUnit.days, interval: 2),
+        notify: true,
+        isDone: false,
+        oneTimeAt: null,
+        anchorAt: now,
+        nextDueAt: now.add(const Duration(days: 2)),
+        completedAt: null,
+        createdAt: now,
+        updatedAt: now,
+      );
 
-    final plan = scheduler.planForTest([habit1, habit2, habit3], now);
+      final plan = scheduler.planForTest([habit1, habit2, habit3], now);
 
-    const reservedCount = 3;
-    final remaining = HabitScheduler.globalCap - reservedCount;
-    final extraPerHabit = remaining ~/ 3; // 57 ~/ 3 = 19
-    final maxAllowedForFast = 1 + extraPerHabit; // 20
+      const reservedCount = 3;
+      final remaining = HabitScheduler.globalCap - reservedCount;
+      final extraPerHabit = remaining ~/ 3; // 57 ~/ 3 = 19
+      final maxAllowedForFast = 1 + extraPerHabit; // 20
 
-    final fastCount = plan.where((r) => r.habitId == 'fast').length;
-    expect(fastCount, lessThanOrEqualTo(maxAllowedForFast));
-  });
+      final fastCount = plan.where((r) => r.habitId == 'fast').length;
+      expect(fastCount, lessThanOrEqualTo(maxAllowedForFast));
+    },
+  );
 
   test('Stable keys: identical across calls and sub-minute now shifts', () {
     final habit = Habit(
@@ -289,10 +294,11 @@ void main() {
       updatedAt: now,
     );
 
-    final plan = scheduler.planForTest(
-      [activeOneTime, doneOneTime, pastOneTime],
-      now,
-    );
+    final plan = scheduler.planForTest([
+      activeOneTime,
+      doneOneTime,
+      pastOneTime,
+    ], now);
 
     expect(plan.length, equals(1));
     expect(plan.first.habitId, equals('ot_active'));
@@ -348,51 +354,57 @@ void main() {
     }
   });
 
-  test('onReminderFired: recurring schedules next, one-time does not', () async {
-    final recurringHabit = Habit(
-      id: 'rec_1',
-      name: 'Recurring Habit',
-      recurrence: const Recurrence(unit: RecurUnit.hours, interval: 1),
-      notify: true,
-      isDone: false,
-      oneTimeAt: null,
-      anchorAt: now,
-      nextDueAt: now.add(const Duration(hours: 1)),
-      completedAt: null,
-      createdAt: now,
-      updatedAt: now,
-    );
+  test(
+    'onReminderFired: recurring schedules next, one-time does not',
+    () async {
+      final recurringHabit = Habit(
+        id: 'rec_1',
+        name: 'Recurring Habit',
+        recurrence: const Recurrence(unit: RecurUnit.hours, interval: 1),
+        notify: true,
+        isDone: false,
+        oneTimeAt: null,
+        anchorAt: now,
+        nextDueAt: now.add(const Duration(hours: 1)),
+        completedAt: null,
+        createdAt: now,
+        updatedAt: now,
+      );
 
-    final oneTimeHabit = Habit(
-      id: 'ot_1',
-      name: 'One Time Habit',
-      recurrence: null,
-      notify: true,
-      isDone: false,
-      oneTimeAt: now.add(const Duration(hours: 2)),
-      anchorAt: now,
-      nextDueAt: null,
-      completedAt: null,
-      createdAt: now,
-      updatedAt: now,
-    );
+      final oneTimeHabit = Habit(
+        id: 'ot_1',
+        name: 'One Time Habit',
+        recurrence: null,
+        notify: true,
+        isDone: false,
+        oneTimeAt: now.add(const Duration(hours: 2)),
+        anchorAt: now,
+        nextDueAt: null,
+        completedAt: null,
+        createdAt: now,
+        updatedAt: now,
+      );
 
-    await repo.insert(recurringHabit);
-    await repo.insert(oneTimeHabit);
+      await repo.insert(recurringHabit);
+      await repo.insert(oneTimeHabit);
 
-    final firedTime = now.add(const Duration(hours: 1));
-    await scheduler.onReminderFired('rec_1', firedTime);
+      final firedTime = now.add(const Duration(hours: 1));
+      await scheduler.onReminderFired('rec_1', firedTime);
 
-    expect(notifications.scheduledSingles.length, equals(1));
-    expect(notifications.scheduledSingles.first.habitId, equals('rec_1'));
-    expect(
-      notifications.scheduledSingles.first.at,
-      equals(now.add(const Duration(hours: 2))),
-    );
+      expect(notifications.scheduledSingles.length, equals(1));
+      expect(notifications.scheduledSingles.first.habitId, equals('rec_1'));
+      expect(
+        notifications.scheduledSingles.first.at,
+        equals(now.add(const Duration(hours: 2))),
+      );
 
-    // Now test one-time fired
-    notifications.scheduledSingles.clear();
-    await scheduler.onReminderFired('ot_1', now.add(const Duration(hours: 2)));
-    expect(notifications.scheduledSingles, isEmpty);
-  });
+      // Now test one-time fired
+      notifications.scheduledSingles.clear();
+      await scheduler.onReminderFired(
+        'ot_1',
+        now.add(const Duration(hours: 2)),
+      );
+      expect(notifications.scheduledSingles, isEmpty);
+    },
+  );
 }

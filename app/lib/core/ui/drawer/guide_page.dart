@@ -33,9 +33,10 @@ class GuidePage extends StatelessWidget {
               content:
                   'Tap the "+ New habit" button at the bottom of the home screen.\n\n'
                   '1. Name: Enter the habit or task you want to stay committed to.\n'
-                  '2. Label (Optional): Organize your habits into custom color-coded groups.\n'
-                  '3. Schedule Mode: Pick between Recurring or One-Time.\n'
-                  '4. Remind me: Toggle ON so the habit is brought back to you when it is due.',
+                  '2. Description / Notes (Optional): Add why it matters or any detail you want to remember. It appears when you expand the habit.\n'
+                  '3. Label (Optional): Organize your habits into custom color-coded groups.\n'
+                  '4. Schedule Mode: Pick between Recurring or One-Time.\n'
+                  '5. Remind me: Toggle ON so the habit is brought back to you when it is due.',
             ),
             const SizedBox(height: 16),
 
@@ -56,17 +57,35 @@ class GuidePage extends StatelessWidget {
               iconColor: Colors.purpleAccent,
               title: 'Labels & Views',
               content:
-                  '• Labels: Manage and assign custom labels (Work, Health, Personal, etc.) with custom colors from the sidebar.\n\n'
+                  '• Labels: Manage and assign custom labels (Work, Health, Personal, etc.) with custom colors from the sidebar. The Manage Labels screen also shows how many habits are assigned to each label.\n\n'
+                  '• Descriptions: Any note you add to a habit stays attached to it and can be read from the expanded habit card.\n\n'
                   '• List & Calendar: Switch between List View and Calendar View using the toggle in the top bar to visualize your schedule over the month.',
             ),
             const SizedBox(height: 16),
 
-            // Notifications & OS 60-Reminder Note
-            _buildNoteCard(
-              title: 'Important Note on Notifications',
+            // Calendar Heatmap
+            _buildSectionCard(
+              icon: Icons.calendar_month_rounded,
+              iconColor: AppColors.accentDeep,
+              title: 'Reading the Calendar Heatmap',
               content:
-                  'To respect OS battery life and device limits (iOS/Android), the app automatically registers up to 60 of your nearest upcoming reminders into the system alarm manager in chronological order.\n\n'
-                  'Simply open the app occasionally as you check off habits — opening the app automatically updates and rolls the next batch of 60 reminders forward so you never miss a notification!',
+                  'Each day is shaded by how much of that day you actually completed, not by how many habits were planned.\n\n'
+                  '• The shade is completed ÷ scheduled. Complete 1 of 2 habits and the day is 50% green; complete 2 of 2 and it is fully green — 1 of 5 is only 20%.\n'
+                  '• A day with habits but nothing completed stays blank, so an empty square never pretends the day went well.\n'
+                  '• Future days show a light outline as “planned”, with no green until the day arrives.\n'
+                  '• Each habit counts once per day, so toggling the same habit repeatedly cannot inflate the shade.\n'
+                  '• The One-Time / Recurring filters change the list below, not the heatmap, so the month always tells the same story.\n\n'
+                  'Tap any day to see its exact progress (for example “2 of 5 done · 40%”) and which habits were completed on that day.',
+            ),
+            const SizedBox(height: 16),
+
+            // Notifications
+            _buildNoteCard(
+              title: 'Reminders & Notifications',
+              content:
+                  'Reminders are handed directly to your phone’s alarm system, so they still arrive when HabitMe is closed or not running in the background.\n\n'
+                  'When a reminder appears, tap “Done” to mark the habit complete without opening the app.\n\n'
+                  'Reminders you have already seen are cleared from the notification shade the next time you open HabitMe, so only fresh reminders stay visible.',
             ),
             const SizedBox(height: 24),
           ],
