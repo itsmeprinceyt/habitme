@@ -22,6 +22,7 @@ void main() {
   final recurring = Habit(
     id: 'habit-1',
     name: 'Drink (2L) water, 💧',
+    description: 'Two litres before lunch',
     labelId: 'label-1',
     recurrence: const Recurrence(unit: RecurUnit.minutes, interval: 30),
     notify: true,
@@ -70,6 +71,10 @@ void main() {
 
       expect(parsed.labels, labelRows);
       expect(parsed.habits, habitRows);
+      expect(
+        parsed.habits.first[HabitColumns.description],
+        'Two litres before lunch',
+      );
       // The autoincrement id belongs to the database, not to the backup.
       expect(parsed.completions, [
         {
@@ -138,6 +143,21 @@ void main() {
       expect(second.labels, first.labels);
       expect(second.habits, first.habits);
       expect(second.completions, first.completions);
+    });
+
+    test('a dump without a description column still decodes as null', () {
+      final text =
+          '${AppConstants.backupMarker}\n'
+          'BEGIN TRANSACTION;\n'
+          'INSERT INTO habits (id, name, is_recurring, notify, is_done, '
+          'anchor_at, created_at, updated_at) VALUES '
+          "('legacy', 'Old habit', 0, 0, 0, 1762300000000, 1762300000000, "
+          '1762300000000);\n'
+          'COMMIT;\n';
+
+      final parsed = SqlCodec.decode(text);
+      expect(parsed.habits.single[HabitColumns.description], isNull);
+      expect(Habit.fromMap(parsed.habits.single).description, isNull);
     });
 
     test('CRLF line endings and INSERT OR REPLACE still parse', () {

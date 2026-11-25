@@ -39,6 +39,7 @@ class AppDatabase {
       CREATE TABLE ${AppConstants.tableHabits} (
         ${HabitColumns.id} TEXT PRIMARY KEY,
         ${HabitColumns.name} TEXT NOT NULL,
+        ${HabitColumns.description} TEXT,
         ${HabitColumns.labelId} TEXT,
         ${HabitColumns.isRecurring} INTEGER NOT NULL DEFAULT 0,
         ${HabitColumns.recurUnit} TEXT,
@@ -101,6 +102,15 @@ class AppDatabase {
         await db.execute('''
           CREATE INDEX IF NOT EXISTS idx_habits_label
           ON ${AppConstants.tableHabits}(${HabitColumns.labelId})
+        ''');
+      } catch (_) {}
+    }
+    if (oldVersion < 3) {
+      // Existing habits keep their schedule and simply have no note (NULL).
+      try {
+        await db.execute('''
+          ALTER TABLE ${AppConstants.tableHabits}
+          ADD COLUMN ${HabitColumns.description} TEXT
         ''');
       } catch (_) {}
     }

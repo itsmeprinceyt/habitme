@@ -117,6 +117,7 @@ class _HabitTileState extends State<HabitTile> {
   @override
   Widget build(BuildContext context) {
     final label = widget.label;
+    final note = habit.description?.trim();
     // Theme color: If label has color use it, otherwise neutral grey (muted)
     final themeColor = label?.color != null
         ? Color(label!.color!)
@@ -360,6 +361,36 @@ class _HabitTileState extends State<HabitTile> {
                                     ),
                                   ),
                                 ],
+                              ),
+                              const SizedBox(height: 8),
+                            ],
+                            if (note != null && note.isNotEmpty) ...[
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.notes_rounded,
+                                    size: 15,
+                                    color: themeColor,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  const Text(
+                                    'Note:',
+                                    style: TextStyle(
+                                      color: AppColors.muted,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              SelectableText(
+                                note,
+                                style: const TextStyle(
+                                  color: AppColors.white,
+                                  fontSize: 12.5,
+                                  height: 1.4,
+                                ),
                               ),
                               const SizedBox(height: 8),
                             ],

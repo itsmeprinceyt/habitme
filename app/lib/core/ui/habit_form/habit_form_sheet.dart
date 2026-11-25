@@ -31,6 +31,7 @@ class HabitFormSheet extends ConsumerStatefulWidget {
 class _HabitFormSheetState extends ConsumerState<HabitFormSheet> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameController;
+  late final TextEditingController _descriptionController;
   String? _selectedLabelId;
   late bool _isRecurring;
   late bool _notify;
@@ -49,6 +50,9 @@ class _HabitFormSheetState extends ConsumerState<HabitFormSheet> {
     super.initState();
     final habit = widget.habit;
     _nameController = TextEditingController(text: habit?.name ?? '');
+    _descriptionController = TextEditingController(
+      text: habit?.description ?? '',
+    );
     _selectedLabelId = habit?.labelId;
     _isRecurring = habit?.isRecurring ?? true;
     _notify = habit?.notify ?? true;
@@ -64,6 +68,7 @@ class _HabitFormSheetState extends ConsumerState<HabitFormSheet> {
   @override
   void dispose() {
     _nameController.dispose();
+    _descriptionController.dispose();
     super.dispose();
   }
 
@@ -197,6 +202,7 @@ class _HabitFormSheetState extends ConsumerState<HabitFormSheet> {
     if (!_formKey.currentState!.validate()) return;
 
     final name = _nameController.text.trim();
+    final description = _descriptionController.text.trim();
     final now = DateTime.now();
     final oneTimeAt = _minuteOf(_oneTimeAt);
     final recurringAt = _minuteOf(_recurringAt);
@@ -228,6 +234,7 @@ class _HabitFormSheetState extends ConsumerState<HabitFormSheet> {
       if (existing == null) {
         final habit = Habit.create(
           name: name,
+          description: description,
           labelId: _selectedLabelId,
           recurrence: recurrence,
           notify: _notify,
@@ -256,6 +263,7 @@ class _HabitFormSheetState extends ConsumerState<HabitFormSheet> {
 
         final updated = existing.copyWith(
           name: name,
+          description: () => description.isEmpty ? null : description,
           labelId: () => _selectedLabelId,
           recurrence: () => recurrence,
           notify: _notify,
@@ -478,6 +486,59 @@ class _HabitFormSheetState extends ConsumerState<HabitFormSheet> {
                             }
                             return null;
                           },
+                        ),
+                        const SizedBox(height: 14),
+
+                        // Optional note shown on the expanded habit tile
+                        const Text(
+                          'DESCRIPTION / NOTES (OPTIONAL)',
+                          style: TextStyle(
+                            color: AppColors.muted,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 1.1,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        TextFormField(
+                          controller: _descriptionController,
+                          minLines: 2,
+                          maxLines: 4,
+                          maxLength: 300,
+                          textCapitalization: TextCapitalization.sentences,
+                          style: const TextStyle(
+                            color: AppColors.white,
+                            fontSize: 14,
+                          ),
+                          decoration: InputDecoration(
+                            hintText:
+                                'Why this matters, or a short reminder note',
+                            hintStyle: const TextStyle(
+                              color: AppColors.muted,
+                              fontSize: 13,
+                            ),
+                            filled: true,
+                            fillColor: AppColors.card,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 12,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(
+                                color: AppColors.accentDeep,
+                                width: 1.4,
+                              ),
+                            ),
+                          ),
                         ),
                         const SizedBox(height: 14),
 

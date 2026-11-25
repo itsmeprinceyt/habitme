@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 abstract final class HabitColumns {
   static const id = 'id';
   static const name = 'name';
+  static const description = 'description';
   static const labelId = 'label_id';
   static const isRecurring = 'is_recurring';
   static const recurUnit = 'recur_unit';
@@ -23,6 +24,7 @@ class Habit {
   const Habit({
     required this.id,
     required this.name,
+    this.description,
     this.labelId,
     required this.recurrence,
     required this.notify,
@@ -37,6 +39,7 @@ class Habit {
 
   factory Habit.create({
     required String name,
+    String? description,
     String? labelId,
     Recurrence? recurrence,
     bool notify = false,
@@ -50,6 +53,7 @@ class Habit {
     return Habit(
       id: const Uuid().v4(),
       name: name.trim(),
+      description: _cleanDescription(description),
       labelId: labelId,
       recurrence: recurrence,
       notify: notify,
@@ -81,6 +85,7 @@ class Habit {
     return Habit(
       id: map[HabitColumns.id] as String? ?? '',
       name: (map[HabitColumns.name] as String?)?.trim() ?? 'Untitled habit',
+      description: _cleanDescription(map[HabitColumns.description] as String?),
       labelId: map[HabitColumns.labelId] as String?,
       recurrence: recurring && unit != null && interval != null
           ? Recurrence(unit: RecurUnit.fromName(unit), interval: interval)
@@ -103,6 +108,7 @@ class Habit {
 
   final String id;
   final String name;
+  final String? description;
   final String? labelId;
   final Recurrence? recurrence;
   final bool notify;
@@ -120,6 +126,7 @@ class Habit {
 
   Habit copyWith({
     String? name,
+    ValueGetter<String?>? description,
     ValueGetter<String?>? labelId,
     ValueGetter<Recurrence?>? recurrence,
     bool? notify,
@@ -133,6 +140,7 @@ class Habit {
     return Habit(
       id: id,
       name: name ?? this.name,
+      description: description != null ? description() : this.description,
       labelId: labelId != null ? labelId() : this.labelId,
       recurrence: recurrence != null ? recurrence() : this.recurrence,
       notify: notify ?? this.notify,
@@ -150,6 +158,7 @@ class Habit {
     return {
       HabitColumns.id: id,
       HabitColumns.name: name,
+      HabitColumns.description: description,
       HabitColumns.labelId: labelId,
       HabitColumns.isRecurring: isRecurring ? 1 : 0,
       HabitColumns.recurUnit: recurrence?.unit.name,
@@ -163,6 +172,12 @@ class Habit {
       HabitColumns.createdAt: createdAt.millisecondsSinceEpoch,
       HabitColumns.updatedAt: updatedAt.millisecondsSinceEpoch,
     };
+  }
+
+  /// Trims a note and stores an empty one as null, so "no note" has one shape.
+  static String? _cleanDescription(String? value) {
+    final trimmed = value?.trim();
+    return trimmed == null || trimmed.isEmpty ? null : trimmed;
   }
 
   static DateTime? _toDate(Object? value) {

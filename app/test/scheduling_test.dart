@@ -164,6 +164,24 @@ void main() {
       expect(habit.createdAt, isA<DateTime>());
     });
 
+    test('an optional description is trimmed, and missing means null', () {
+      Map<String, Object?> row(Object? description) => {
+        HabitColumns.id: 'h4',
+        HabitColumns.name: 'Described habit',
+        HabitColumns.description: ?description,
+        HabitColumns.isRecurring: 0,
+        HabitColumns.notify: 0,
+        HabitColumns.isDone: 0,
+        HabitColumns.anchorAt: 1762300000000,
+        HabitColumns.createdAt: 1762300000000,
+        HabitColumns.updatedAt: 1762300000000,
+      };
+
+      expect(Habit.fromMap(row('  Take it slow  ')).description, 'Take it slow');
+      expect(Habit.fromMap(row(null)).description, isNull);
+      expect(Habit.fromMap(row('   ')).description, isNull);
+    });
+
     test('epochs stored as text are parsed, unparseable ones read as null', () {
       final habit = Habit.fromMap({
         HabitColumns.id: 'h3',
