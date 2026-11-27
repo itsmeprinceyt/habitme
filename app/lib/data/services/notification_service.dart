@@ -330,9 +330,17 @@ class NotificationService {
     if (!rearmAll && signature == _signature && wanted.isNotEmpty) return;
 
     var pending = <int>{};
+    final armedContent = <int, String>{};
     try {
       final requests = await _guard(_plugin.pendingNotificationRequests());
       pending = {for (final request in requests) request.id};
+      for (final request in requests) {
+        // A platform that reports no title gives us nothing to compare, so the
+        // reminder is treated as unchanged rather than re-armed on every sync.
+        if (request.title != null) {
+          armedContent[request.id] = _contentOf(request.title, request.body);
+        }
+      }
     } catch (error) {
       // Without the pending list we cannot tell which alarms are stale, so
       // clear everything and re-arm the whole plan.
@@ -356,7 +364,21 @@ class NotificationService {
     final mode = await _scheduleMode();
     var scheduled = 0;
     for (final entry in wanted.entries) {
-      if (!rearmAll && pending.contains(entry.key)) continue; // already armed
+      if (!rearmAll && pending.contains(entry.key)) {
+        final armed = armedContent[entry.key];
+        // A notification's title/body are captured when it is armed, so a
+        // habit renamed after scheduling would keep showing the old name.
+        // Replace it instead of treating "same id" as "nothing changed".
+        if (armed == null ||
+            armed == _contentOf(entry.value.title, entry.value.body)) {
+          continue; // already armed with the current text
+        }
+        try {
+          await _guard(_plugin.cancel(id: entry.key));
+        } catch (error) {
+          debugPrint('Cancelling outdated notification ${entry.key} failed: $error');
+        }
+      }
       await _schedule(entry.value, entry.key, mode);
       scheduled++;
     }
@@ -417,10 +439,17 @@ class NotificationService {
     }
   }
 
+  /// The reminder text that a scheduled notification will actually show.
+  static String _contentOf(String? title, String? body) =>
+      '${title ?? ''}\u0000${body ?? ''}';
+
+  /// Covers the text as well as the id and time, so renaming a habit (same id,
+  /// same minute) is not mistaken for an unchanged schedule.
   String _signatureOf(Map<int, ScheduledReminder> wanted) {
     final parts = [
       for (final entry in wanted.entries)
-        '${entry.key}=${entry.value.at.microsecondsSinceEpoch}',
+        '${entry.key}=${entry.value.at.microsecondsSinceEpoch}'
+            '=${_contentOf(entry.value.title, entry.value.body)}',
     ]..sort();
     return parts.join(',');
   }

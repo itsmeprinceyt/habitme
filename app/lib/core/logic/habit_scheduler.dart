@@ -152,12 +152,17 @@ class HabitScheduler {
 
   ScheduledReminder _makeReminder(Habit habit, DateTime at) {
     final normalized = _toMinute(at);
-    final isRecurring = habit.recurrence != null;
+    final note = habit.description?.trim();
     return ScheduledReminder(
       key: _key(habit, normalized),
       habitId: habit.id,
       title: habit.name,
-      body: isRecurring
+      // The habit's own note is the most useful line under the title; habits
+      // without one keep the schedule hint so the reminder still says why it
+      // showed up.
+      body: note != null && note.isNotEmpty
+          ? note
+          : habit.recurrence != null
           ? 'Time to do it · ${habit.recurrence!.label}'
           : 'Reminder',
       at: normalized,
